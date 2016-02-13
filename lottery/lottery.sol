@@ -18,9 +18,10 @@ contract Lottery {
   event NewEntry(address addr, uint32 at, uint32 round, uint32 tickets, uint32 total);
   event NewWinner(address addr, uint32 at, uint32 round, uint32 tickets, uint result);
 
-  uint constant private LEHMER_G = 279470273;
-  uint constant private LEHMER_N = 4294967291;
-  uint constant private LEHMER_X = 522227;
+  uint constant private LEHMER_MUL = 279470273;
+  uint constant private LEHMER_MOD = 4294967291;
+  uint constant private LEHMER_SDA = 522227;
+  uint constant private LEHMER_SDB = 7919;
 
   uint constant public CONFIG_DURATION = 24 hours;
   uint constant public CONFIG_MIN_ENTRIES = 5;
@@ -35,7 +36,8 @@ contract Lottery {
   address private owner = msg.sender;
 
   uint private result = now;
-  uint private lehmer = LEHMER_X;
+  uint private seeda = LEHMER_SDA;
+  uint private seedb = LEHMER_SDB;
 
   uint8[25000] private tickets;
   mapping (uint => address) private entries;
@@ -64,8 +66,9 @@ contract Lottery {
       throw;
     }
 
-    lehmer = (lehmer * LEHMER_G) % LEHMER_N;
-    result = uint(sha3(block.blockhash(block.number - 1), result, lehmer));
+    seeda = (seeda * LEHMER_MUL) % LEHMER_MOD;
+    result = uint(sha3(block.blockhash(block.number - 1), result ^ (seeda * seedb)));
+    seedb = (seedb * LEHMER_MUL) % LEHMER_MOD;
 
     if ((numentries >= CONFIG_MAX_ENTRIES) || ((numentries >= CONFIG_MIN_ENTRIES) && (now > end))) {
       uint winidx = tickets[result % numtickets];
