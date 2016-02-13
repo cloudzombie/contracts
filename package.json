@@ -1,0 +1,22 @@
+{
+  "name": "contracts",
+  "version": "1.0.0",
+  "description": "Ethereum contracts for the.looney.farm",
+  "main": "README.md",
+  "scripts": {
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thelooneyfarm/contracts.git"
+  },
+  "keywords": [
+    "Ethereum",
+    "Solidity"
+  ],
+  "author": "Xavier Yvez <xavieryvez@gmail.com>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/thelooneyfarm/contracts/issues"
+  },
+  "homepage": "https://github.com/thelooneyfarm/contracts#readme"
+}
