@@ -18,6 +18,9 @@ contract Lottery {
   event NewEntry(address addr, uint32 at, uint32 round, uint32 tickets, uint32 total);
   event NewWinner(address addr, uint32 at, uint32 round, uint32 tickets, uint result);
 
+  uint constant private LEHMER_G = 279470273;
+  uint constant private LEHMER_N = 4294967291;
+
   uint constant public CONFIG_DURATION = 24 hours;
   uint constant public CONFIG_MIN_ENTRIES = 5;
   uint constant public CONFIG_MAX_ENTRIES = 222;
@@ -28,11 +31,12 @@ contract Lottery {
   uint constant public CONFIG_MIN_VALUE = CONFIG_PRICE;
   uint constant public CONFIG_MAX_VALUE = CONFIG_PRICE * CONFIG_MAX_TICKETS;
 
-  address owner = msg.sender;
-  uint random = uint(block.coinbase) ^ uint(msg.sender) ^ now;
+  address private owner = msg.sender;
+  uint private random = uint(block.coinbase) ^ uint(msg.sender) ^ now;
+  uint private rngseed = random;
 
-  uint8[25000] tickets;
-  mapping (uint => address) entries;
+  uint8[25000] private tickets;
+  mapping (uint => address) private entries;
 
   Winner public winner;
   uint public round = 1;
@@ -101,6 +105,8 @@ contract Lottery {
 
     numentries++;
     txs += number;
-    random = random ^ uint(sha3(block.blockhash(block.number - 1), uint(block.coinbase) ^ uint(msg.sender) ^ txs));
+
+    rngseed = (rngseed * LEHMER_G) % LEHMER_N;
+    random = uint(sha3(block.blockhash(block.number - 1), random ^ rngseed));
   }
 }

@@ -23,26 +23,30 @@ tl;dr - Sending from an etherbase account is fine, however mist wallets contract
 
 ### random numbers
 
-Randomness is always an issue on the Ethereum blockchain, so we should probably take some time to explain how we calculate some randomness.
+Randomness is always an issue on the Ethereum blockchain, so we should probably take some time to explain how we calculate some randomness. The basics of the approach is to use a Linear Congruential Generator, specifically the (https://en.wikipedia.org/wiki/Lehmer_random_number_generator)(Lehmer generator) along with rolling values from the blockhash.
 
-On initialization of the contracts, the random seed is set to some value as a base. (As we will see later each iteration builds on this number so it is ever evolving with all new transactions)
-
-```
-  uint random = uint(block.coinbase) ^ uint(msg.sender) ^ now;
-```
-
-On receiving a transaction and adding everything to the pool, the contract mutates the random number using available block information. This is done after payouts, returning extra information, sending events etc. Changes to the number doesn't influence the current transaction, but rather it would influence the one that follows.
+On initialization of the contracts, an initial random value is set to some value to provide a base to work from. Since payouts can't happen immediately, the randomness of this number is weak, however the miner, sender and now value is used to initialize it. In addition the Lehmer source (rngseed) is initialized to the same starting point
 
 ```
-  random = random ^ uint(sha3(block.blockhash(block.number - 1), uint(block.coinbase) ^ uint(msg.sender) ^ txs));
+  uint constant private LEHMER_G = 279470273;
+  uint constant private LEHMER_N = 4294967291;
+  ...
+  uint private random = uint(block.coinbase) ^ uint(msg.sender) ^ now;
+  uint private rngseed = random;
 ```
 
-The above happens with each transaction received, adding more entropy to the actual random number. The seed continues building with each transaction it gets. This removes one vector of attack where the numbers aren't independent and done at the time of drawing, rather in this case results are a result of the whole chain of transactions that has gone before.
+After receiving a transaction and adding everything to the pool, the contract mutates the random number using the available blockhash information, the current random number and the next calculated `rndseed`.
 
-When a winner is to be chosen, the random number chain is used to calculate the outcome
+```
+  rngseed = (rngseed * LEHMER_G) % LEHMER_N;
+  random = uint(sha3(block.blockhash(block.number - 1), random ^ rngseed));
+```
+
+With each transaction received, more entropy is added to the actual random number, with each previous value feeding back into the pool, both for the rngseed and random outcome. In this case results are a evolving based on the whole chain of transactions that has gone before.
+
+When a winner is to be chosen, the random number chain is converted to a SHA3 and this value is used to calculate the winning outcome
 
 ```
   uint result = uint(sha3(random));
+  uint winidx = tickets[result % numtickets];
 ```
-
-Using this approach, the outcome of the specific transaction cannot be affected (if a winner is to be chosen, it is already decided based on the preceding transactions), however each specific input affects the outcome of those transactions that follow.
