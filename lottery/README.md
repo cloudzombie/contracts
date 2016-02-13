@@ -4,8 +4,19 @@ Ethereum contract for [http://the.looney.farm/game/lottery](http://the.looney.fa
 
 ### implementation notes
 
-We are not using the stock-standard `msg.sender.send(_value);` anywhere, rather we are going with
-`msg.sender.call.value(_value)();`. This is due to [https://github.com/ethereum/mist/issues/135](https://github.com/ethereum/mist/issues/135) where Mist contract wallet sends may (and do) fail silently.
+We are not using the stock-standard approch to sending value, i.e.
+
+```
+msg.sender.send(_value);
+```
+
+anywhere, rather we calling back into the sender with
+
+```
+msg.sender.call.value(_value)();
+```
+
+This approach is due to [https://github.com/ethereum/mist/issues/135](https://github.com/ethereum/mist/issues/135) where Mist contract wallet sends may (and do) fail silently. Rather than not being able to return funds or warning against Mist, we took the view that it should always work for the user.
 
 tl;dr - Sending from an etherbase account is fine, however mist wallets contract are not and fees cannot be returned
 
