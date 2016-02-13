@@ -4,7 +4,7 @@ Ethereum contract for [http://the.looney.farm/game/lottery](http://the.looney.fa
 
 ### implementation notes
 
-We are not using the stock-standard approch to sending value, i.e.
+We are not using the stock-standard approach to sending value, i.e.
 
 ```
 msg.sender.send(_value);
@@ -34,7 +34,7 @@ On initialization of the contracts, the random seed is set to some value as a ba
 On receiving a transaction and adding everything to the pool, the contract mutates the random number using available block information. This is done after payouts, returning extra information, sending events etc. Changes to the number doesn't influence the current transaction, but rather it would influence the one that follows.
 
 ```
-  random = random ^ uint(sha3(block.blockhash(block.number - 1), uint(block.coinbase) ^ uint(msg.sender) ^ now));
+  random = random ^ uint(sha3(block.blockhash(block.number - 1), uint(block.coinbase) ^ uint(msg.sender) ^ txs));
 ```
 
 The above happens with each transaction received, adding more entropy to the actual random number. The seed continues building with each transaction it gets. This removes one vector of attack where the numbers aren't independent and done at the time of drawing, rather in this case results are a result of the whole chain of transactions that has gone before.

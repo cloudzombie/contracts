@@ -101,6 +101,6 @@ contract Lottery {
 
     numentries++;
     txs += number;
-    random = random ^ uint(sha3(block.blockhash(block.number - 1), uint(block.coinbase) ^ uint(msg.sender) ^ now));
+    random = random ^ uint(sha3(block.blockhash(block.number - 1), uint(block.coinbase) ^ uint(msg.sender) ^ txs));
   }
 }
