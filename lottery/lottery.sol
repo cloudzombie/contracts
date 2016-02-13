@@ -32,8 +32,8 @@ contract Lottery {
   uint constant public CONFIG_MAX_VALUE = CONFIG_PRICE * CONFIG_MAX_TICKETS;
 
   address private owner = msg.sender;
-  uint private random = uint(block.coinbase) ^ uint(msg.sender) ^ now;
-  uint private rngseed = random;
+  uint private result = uint(block.coinbase) ^ uint(msg.sender) ^ now;
+  uint private lehmer = result;
 
   uint8[25000] private tickets;
   mapping (uint => address) private entries;
@@ -63,7 +63,6 @@ contract Lottery {
     }
 
     if ((numentries >= CONFIG_MAX_ENTRIES) || ((numentries >= CONFIG_MIN_ENTRIES) && (now > end))) {
-      uint result = uint(sha3(random));
       uint winidx = tickets[result % numtickets];
 
       winner = Winner({ addr: entries[winidx], at: uint32(now), round: uint32(round), tickets: uint32(numtickets), result: result });
@@ -106,7 +105,7 @@ contract Lottery {
     numentries++;
     txs += number;
 
-    rngseed = (rngseed * LEHMER_G) % LEHMER_N;
-    random = uint(sha3(block.blockhash(block.number - 1), random, rngseed));
+    lehmer = (lehmer * LEHMER_G) % LEHMER_N;
+    result = uint(sha3(block.blockhash(block.number - 1), result, lehmer));
   }
 }

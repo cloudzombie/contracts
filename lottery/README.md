@@ -31,22 +31,21 @@ On initialization of the contracts, an initial random value is set to some value
   uint constant private LEHMER_G = 279470273;
   uint constant private LEHMER_N = 4294967291;
   ...
-  uint private random = uint(block.coinbase) ^ uint(msg.sender) ^ now;
-  uint private rngseed = random;
+  uint private result = uint(block.coinbase) ^ uint(msg.sender) ^ now;
+  uint private lehmer = random;
 ```
 
-After receiving a transaction and adding everything to the pool, the contract mutates the random number using the available blockhash information, the current random number and the next calculated `rndseed`.
+After receiving a transaction and adding everything to the pool, the contract mutates the random number using the available blockhash information, the current result and the next calculated Lehmer number.
 
 ```
-  rngseed = (rngseed * LEHMER_G) % LEHMER_N;
-  random = uint(sha3(block.blockhash(block.number - 1), random, rngseed));
+  lehmer = (lehmer * LEHMER_G) % LEHMER_N;
+  result = uint(sha3(block.blockhash(block.number - 1), result, lehmer));
 ```
 
 With each transaction received, more entropy is added to the actual random number, with each previous value feeding back into the pool, both for the rngseed and random outcome. In this case results are evolving based on the whole chain of transactions that has gone before.
 
-When a winner is to be chosen, the random number chain is converted to a SHA3 and this value is used to calculate the winning outcome
+When a winner is to be chosen, the random number chain is converted is used to determine the ticket index of the final winner
 
 ```
-  uint result = uint(sha3(random));
   uint winidx = tickets[result % numtickets];
 ```
