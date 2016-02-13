@@ -20,7 +20,7 @@ contract Lottery {
 
   uint constant private LEHMER_G = 279470273;
   uint constant private LEHMER_N = 4294967291;
-  uint constant private LEHMER_X = 7919;
+  uint constant private LEHMER_X = 522227;
 
   uint constant public CONFIG_DURATION = 24 hours;
   uint constant public CONFIG_MIN_ENTRIES = 5;

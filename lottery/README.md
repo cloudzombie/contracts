@@ -27,12 +27,12 @@ Randomness is always an issue on the Ethereum blockchain, so we should probably 
 
 On initialization of the contracts, an initial result value is set to provide a base to work from. Since payouts can't happen immediately, the randomness of this number can be weak, so we allow initialization with the mining timestamp.
 
-For the Lehmer generator, all starting values needs to be a co-prime to the modulus N, to comply with no room for error, we start with X as the 1000th prime, [7919](http://www.isprimenumber.com/prime/7919). In this case, choosing any number >0 should work with the chosen G & N values.
+For the Lehmer generator, all starting values needs to be a co-prime to the modulus N, to comply with no room for error, we start with X as a prime, [522227](http://www.isprimenumber.com/prime/522227). In this case, choosing any number >0 should work with the chosen G & N values since they are co-primes, and suggested defaults with proper statistical properties.
 
 ```
   uint constant private LEHMER_G = 279470273;
   uint constant private LEHMER_N = 4294967291;
-  uint constant private LEHMER_X = 7919;
+  uint constant private LEHMER_X = 522227;
   ...
   uint private result = now;
   uint private lehmer = LEHMER_X;
