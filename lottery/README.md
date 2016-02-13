@@ -23,28 +23,31 @@ tl;dr - Sending from an etherbase account is fine, however mist wallets contract
 
 ### random numbers
 
-Randomness is always an issue on the Ethereum blockchain, so we should probably take some time to explain how we calculate some randomness. The basics of the approach is to use a Linear Congruential Generator, specifically the [Lehmer generator](https://en.wikipedia.org/wiki/Lehmer_random_number_generator) along with rolling values from the blockhash.
+Randomness is always an issue on the Ethereum blockchain, so we should probably take some time to explain how we calculate some randomness. The basics of the approach is to use a Linear Congruential Generator, specifically the [Lehmer generator](https://en.wikipedia.org/wiki/Lehmer_random_number_generator) along with values from the blockhash and previous calculations.
 
-On initialization of the contracts, an initial random value is set to some value to provide a base to work from. Since payouts can't happen immediately, the randomness of this number is weak, however the miner, sender and now value is used to initialize it. In addition the Lehmer source (rngseed) is initialized to the same starting point
+On initialization of the contracts, an initial result value is set to provide a base to work from. Since payouts can't happen immediately, the randomness of this number can be weak, so we allow initialization with the mining timestamp.
+
+For the Lehmer generator, all starting values needs to be a co-prime to the modulus N, to comply with no room for error, we start with X as the 1000th prime, [7919](http://www.isprimenumber.com/prime/7919). In this case, choosing any number >0 should work with the chosen G & N values.
 
 ```
   uint constant private LEHMER_G = 279470273;
   uint constant private LEHMER_N = 4294967291;
+  uint constant private LEHMER_X = 7919;
   ...
-  uint private result = uint(block.coinbase) ^ uint(msg.sender) ^ now;
-  uint private lehmer = random;
+  uint private result = now;
+  uint private lehmer = LEHMER_X;
 ```
 
-After receiving a transaction and adding everything to the pool, the contract mutates the random number using the available blockhash information, the current result and the next calculated Lehmer number.
+After receiving a transaction, the contract mutates the result number using as hash of the available/previous blockhash, the current result and the next calculated Lehmer number.
 
 ```
   lehmer = (lehmer * LEHMER_G) % LEHMER_N;
   result = uint(sha3(block.blockhash(block.number - 1), result, lehmer));
 ```
 
-With each transaction received, more entropy is added to the actual random number, with each previous value feeding back into the pool, both for the rngseed and random outcome. In this case results are evolving based on the whole chain of transactions that has gone before.
+With each transaction received, more entropy is added to the actual random number, with each previous value feeding back into the pool, both for the Lehmer value and resulting outcome. In this case results are evolving based on the whole chain of transactions that has gone before.
 
-When a winner is to be chosen, the random number chain is converted is used to determine the ticket index of the final winner
+When a winner is to be chosen, the result number chain is used to determine the ticket index of the final winner
 
 ```
   uint winidx = tickets[result % numtickets];
