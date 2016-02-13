@@ -31,16 +31,16 @@ On initialization of the contracts, the random seed is set to some value as a ba
   uint random = uint(block.coinbase) ^ uint(msg.sender) ^ now;
 ```
 
-On receiving a transaction, the contract mutates the random number using available block information. The view was to do this after the transaction was received (i.e. the number cannot be changed), however with deep block inspection the stored contract data can be found, so the best approach is to mutate before doing anything else
+On receiving a transaction and adding everything to the pool, the contract mutates the random number using available block information. This is done after payouts, returning extra information, sending events etc. Changes to the number doesn't influence the current transaction, but rather it would influence the one that follows.
 
 ```
   random = random ^ uint(sha3(block.blockhash(block.number - 1), uint(block.coinbase) ^ uint(msg.sender) ^ now));
 ```
 
-The above happens with each transaction received, adding more entropy to the actual random number. Basically the seed continues building with each oppportunity it gets. This removes one vector of attack where the numbers aren't independent, rather it is a result of the whole chain of transactions that has gone before it.
+The above happens with each transaction received, adding more entropy to the actual random number. The seed continues building with each transaction it gets. This removes one vector of attack where the numbers aren't independent and done at the time of drawing, rather in this case results are a result of the whole chain of transactions that has gone before.
 
-When a winner is to be chosen, the random number is first updated (as above) and then the result is calculated. This result is used to pick the outcome
+When a winner is to be chosen, the random number chain is used to calculate the outcome
 
 ```
-  uint result = uint(sha3(random ^ this.balance));
+  uint result = uint(sha3(random));
 ```

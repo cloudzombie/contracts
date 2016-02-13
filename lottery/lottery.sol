@@ -58,10 +58,8 @@ contract Lottery {
       throw;
     }
 
-    random = random ^ uint(sha3(block.blockhash(block.number - 1), uint(block.coinbase) ^ uint(msg.sender) ^ now));
-
     if ((numentries >= CONFIG_MAX_ENTRIES) || ((numentries >= CONFIG_MIN_ENTRIES) && (now > end))) {
-      uint result = uint(sha3(random ^ this.balance));
+      uint result = uint(sha3(random));
       uint winidx = tickets[result % numtickets];
 
       winner = Winner({ addr: entries[winidx], at: uint32(now), round: uint32(round), tickets: uint32(numtickets), result: result });
@@ -103,5 +101,6 @@ contract Lottery {
 
     numentries++;
     txs += number;
+    random = random ^ uint(sha3(block.blockhash(block.number - 1), uint(block.coinbase) ^ uint(msg.sender) ^ now));
   }
 }
