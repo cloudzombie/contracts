@@ -42,7 +42,7 @@ After receiving a transaction and adding everything to the pool, the contract mu
   random = random ^ rngseed ^ uint(sha3(block.blockhash(block.number - 1)));
 ```
 
-With each transaction received, more entropy is added to the actual random number, with each previous value feeding back into the pool, both for the rngseed and random outcome. In this case results are a evolving based on the whole chain of transactions that has gone before.
+With each transaction received, more entropy is added to the actual random number, with each previous value feeding back into the pool, both for the rngseed and random outcome. In this case results are evolving based on the whole chain of transactions that has gone before.
 
 When a winner is to be chosen, the random number chain is converted to a SHA3 and this value is used to calculate the winning outcome
 
