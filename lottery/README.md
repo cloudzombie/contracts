@@ -44,3 +44,5 @@ When a winner is to be chosen, the random number chain is used to calculate the 
 ```
   uint result = uint(sha3(random));
 ```
+
+Using this approach, the outcome of the specific transaction cannot be affected (if a winner is to be chose, it is already decided based on the transactions that went before it), however each specific input only affects the outcome of those transactions that follow.
