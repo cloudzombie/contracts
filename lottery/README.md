@@ -39,7 +39,7 @@ After receiving a transaction and adding everything to the pool, the contract mu
 
 ```
   rngseed = (rngseed * LEHMER_G) % LEHMER_N;
-  random = random ^ rngseed ^ uint(sha3(block.blockhash(block.number - 1)));
+  random = uint(sha3(block.blockhash(block.number - 1), random, rngseed));
 ```
 
 With each transaction received, more entropy is added to the actual random number, with each previous value feeding back into the pool, both for the rngseed and random outcome. In this case results are evolving based on the whole chain of transactions that has gone before.
