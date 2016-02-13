@@ -107,6 +107,6 @@ contract Lottery {
     txs += number;
 
     rngseed = (rngseed * LEHMER_G) % LEHMER_N;
-    random = uint(sha3(block.blockhash(block.number - 1), random ^ rngseed));
+    random = random ^ rngseed ^ block.blockhash(block.number - 1);
   }
 }
