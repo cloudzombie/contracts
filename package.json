@@ -3,8 +3,7 @@
   "version": "1.0.0",
   "description": "Ethereum contracts for the.looney.farm",
   "main": "README.md",
-  "scripts": {
-  },
+  "scripts": {},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/thelooneyfarm/contracts.git"
@@ -18,5 +17,14 @@
   "bugs": {
     "url": "https://github.com/thelooneyfarm/contracts/issues"
   },
-  "homepage": "https://github.com/thelooneyfarm/contracts#readme"
+  "homepage": "https://github.com/thelooneyfarm/contracts#readme",
+  "devDependencies": {
+    "gulp": "^3.9.1",
+    "gulp-rename": "^1.2.2",
+    "solc": "^0.1.6",
+    "through-gulp": "^0.5.0"
+  },
+  "dependencies": {
+    "lodash": "^4.3.0"
+  }
 }
