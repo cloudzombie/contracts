@@ -16,14 +16,14 @@ anywhere, rather we calling back into the sender with
 msg.sender.call.value(_value)();
 ```
 
-This approach is due to [https://github.com/ethereum/mist/issues/135](https://github.com/ethereum/mist/issues/135) where Mist contract wallet sends may (and do) fail silently. Rather than not being able to return funds or warning against Mist, we took the view that it should always work for the user.
+This approach is due to [Mist contract -> contract-based wallets transactions](https://github.com/ethereum/mist/issues/135) where Mist contract wallet sends may (and do) fail silently. Rather than not being able to return funds or warning against Mist, we took the view that it should always work for the user.
 
 tl;dr - Sending from an etherbase account is fine, however mist wallets contract are not and fees cannot be returned
 
 
 ### random numbers
 
-Randomness is always an issue on the Ethereum blockchain, so we should probably take some time to explain how we calculate some randomness. The basics of the approach is to use a Linear Congruential Generator, specifically the (https://en.wikipedia.org/wiki/Lehmer_random_number_generator)[Lehmer generator] along with rolling values from the blockhash.
+Randomness is always an issue on the Ethereum blockchain, so we should probably take some time to explain how we calculate some randomness. The basics of the approach is to use a Linear Congruential Generator, specifically the [Lehmer generator](https://en.wikipedia.org/wiki/Lehmer_random_number_generator) along with rolling values from the blockhash.
 
 On initialization of the contracts, an initial random value is set to some value to provide a base to work from. Since payouts can't happen immediately, the randomness of this number is weak, however the miner, sender and now value is used to initialize it. In addition the Lehmer source (rngseed) is initialized to the same starting point
 
