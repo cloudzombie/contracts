@@ -23,7 +23,7 @@ tl;dr - Sending from an etherbase account is fine, however mist wallets contract
 
 ### random numbers
 
-Randomness is always an issue on the Ethereum blockchain, so we should probably take some time to explain how we calculate some randomness. The basics of the approach is to use a Linear Congruential Generator, specifically the (https://en.wikipedia.org/wiki/Lehmer_random_number_generator)(Lehmer generator) along with rolling values from the blockhash.
+Randomness is always an issue on the Ethereum blockchain, so we should probably take some time to explain how we calculate some randomness. The basics of the approach is to use a Linear Congruential Generator, specifically the (https://en.wikipedia.org/wiki/Lehmer_random_number_generator)[Lehmer generator] along with rolling values from the blockhash.
 
 On initialization of the contracts, an initial random value is set to some value to provide a base to work from. Since payouts can't happen immediately, the randomness of this number is weak, however the miner, sender and now value is used to initialize it. In addition the Lehmer source (rngseed) is initialized to the same starting point
 
