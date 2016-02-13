@@ -1,6 +1,6 @@
 ## contracts
 
-Ethereum contracts for (http://the.looney.farm)[http://the.looney.farm]
+Ethereum contracts for [http://the.looney.farm](http://the.looney.farm)
 
 ### information
 

@@ -1,5 +1,7 @@
 ## lottery
 
+Ethereum contract for [http://the.looney.farm/game/lottery](http://the.looney.farm/game/lottery)
+
 ### implementation notes
 
 We are not using the stock-standard `msg.sender.send(_value);` anywhere, rather we are going with
