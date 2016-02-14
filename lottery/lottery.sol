@@ -1,4 +1,4 @@
-contract Lottery {
+contract LooneyLottery {
   struct Winner {
     address addr;
     uint32 at;
