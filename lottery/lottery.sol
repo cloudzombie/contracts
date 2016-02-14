@@ -49,7 +49,7 @@ contract LooneyLottery {
   uint public end = start + CONFIG_DURATION;
   uint public txs = 0;
 
-  function Lottery() {
+  function LooneyLottery() {
   }
 
   function ownerWithdraw() owneronly public {
