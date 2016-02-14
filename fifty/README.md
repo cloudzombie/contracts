@@ -1,6 +1,6 @@
 # fifty
 
-Ethereum contract for the [Looney Fifty](http://the.looney.farm/game/lottery)
+Ethereum contract for the [Looney Fifty](http://the.looney.farm/game/fifty)
 
 ## randomness
 
