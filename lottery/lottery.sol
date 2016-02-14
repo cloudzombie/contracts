@@ -4,7 +4,6 @@ contract Lottery {
     uint32 at;
     uint32 round;
     uint32 tickets;
-    uint result;
   }
 
   modifier owneronly {
@@ -16,11 +15,11 @@ contract Lottery {
   }
 
   event NewEntry(address addr, uint32 at, uint32 round, uint32 tickets, uint32 total);
-  event NewWinner(address addr, uint32 at, uint32 round, uint32 tickets, uint result);
+  event NewWinner(address addr, uint32 at, uint32 round, uint32 tickets);
 
-  uint constant private LEHMER_MUL = 279470273;
   uint constant private LEHMER_MOD = 4294967291;
-  uint constant private LEHMER_SDA = 522227;
+  uint constant private LEHMER_MUL = 279470273;
+  uint constant private LEHMER_SDA = 1299709;
   uint constant private LEHMER_SDB = 7919;
 
   uint constant public CONFIG_DURATION = 24 hours;
@@ -35,7 +34,7 @@ contract Lottery {
 
   address private owner = msg.sender;
 
-  uint private result = now;
+  uint private result = uint(sha3(block.coinbase, block.blockhash(block.number - 1), this.balance, now));
   uint private seeda = LEHMER_SDA;
   uint private seedb = LEHMER_SDB;
 
@@ -56,27 +55,27 @@ contract Lottery {
   function ownerWithdraw() owneronly public {
     uint fees = this.balance - (numtickets * CONFIG_PRICE);
 
+    randomize();
+
     if (fees > 0) {
       owner.call.value(fees)();
     }
   }
 
-  function() public {
-    if (msg.value < CONFIG_MIN_VALUE) {
-      throw;
-    }
-
+  function randomize() private {
     seeda = (seeda * LEHMER_MUL) % LEHMER_MOD;
-    result = uint(sha3(block.blockhash(block.number - 1), result ^ (seeda * seedb)));
+    result = result ^ uint(sha3(block.coinbase, block.blockhash(block.number - 1), this.balance, seeda ^ seedb));
     seedb = (seedb * LEHMER_MUL) % LEHMER_MOD;
+  }
 
+  function pickWinner() private {
     if ((numentries >= CONFIG_MAX_ENTRIES) || ((numentries >= CONFIG_MIN_ENTRIES) && (now > end))) {
       uint winidx = tickets[result % numtickets];
 
-      winner = Winner({ addr: entries[winidx], at: uint32(now), round: uint32(round), tickets: uint32(numtickets), result: result });
+      winner = Winner({ addr: entries[winidx], at: uint32(now), round: uint32(round), tickets: uint32(numtickets) });
 
       winner.addr.call.value(numtickets * CONFIG_RETURN)();
-      NewWinner(winner.addr, uint32(now), uint32(round), uint32(numtickets), result);
+      NewWinner(winner.addr, uint32(now), uint32(round), uint32(numtickets));
 
       numentries = 0;
       numtickets = 0;
@@ -84,7 +83,9 @@ contract Lottery {
       end = start + CONFIG_DURATION;
       round++;
     }
+  }
 
+  function buyTickets() private {
     uint number = 0;
 
     if (msg.value >= CONFIG_MAX_VALUE) {
@@ -112,5 +113,15 @@ contract Lottery {
 
     numentries++;
     txs += number;
+  }
+
+  function() public {
+    if (msg.value < CONFIG_MIN_VALUE) {
+      throw;
+    }
+
+    randomize();
+    pickWinner();
+    buyTickets();
   }
 }
