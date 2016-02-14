@@ -21,7 +21,7 @@
   "devDependencies": {
     "gulp": "^3.9.1",
     "gulp-rename": "^1.2.2",
-    "solc": "^0.1.6",
+    "solc": "^0.2.1-1",
     "through-gulp": "^0.5.0"
   },
   "dependencies": {
