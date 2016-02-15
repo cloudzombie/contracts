@@ -15,7 +15,7 @@ contract LooneyFifty {
     _
   }
 
-  event NextPlayer(address addr, uint32 at, uint input, uint output, uint pool);
+  event NextPlayer(address addr, uint32 at, uint input, uint output, uint txs);
 
   uint constant private LEHMER_MOD = 4294967291;
   uint constant private LEHMER_MUL = 279470273;
@@ -86,10 +86,10 @@ contract LooneyFifty {
     }
 
     // uint ratio = (output * CONFIG_RATIO_MUL) / input;
-    NextPlayer(msg.sender, uint32(now), input, output, pool);
+    txs += number;
+    NextPlayer(msg.sender, uint32(now), input, output, txs);
 
     output += msg.value - input;
-    txs += number;
 
     if (output > 0) {
       msg.sender.call.value(output)();
