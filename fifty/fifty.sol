@@ -47,6 +47,7 @@ contract LooneyFifty {
   function ownerWithdraw() owneronly public {
     if (fees > 0) {
       owner.call.value(fees)();
+      fees = 0;
     }
   }
 
