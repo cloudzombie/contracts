@@ -15,7 +15,7 @@ contract LooneyFifty {
     _
   }
 
-  event NextPlayer(address addr, uint32 at, uint8 pwins, uint8 plosses, uint input, uint output, uint wins, uint txs);
+  event NextPlayer(address addr, uint32 at, uint8 pwins, uint8 plosses, uint input, uint output, uint wins, uint txs, uint played);
 
   uint constant private LEHMER_MOD = 4294967291;
   uint constant private LEHMER_MUL = 279470273;
@@ -29,11 +29,11 @@ contract LooneyFifty {
   uint constant public CONFIG_FEES_MUL = 5;
   uint constant public CONFIG_FEES_DIV = 1000;
 
-  uint[2] private CONFIG_PRICES = [CONFIG_PRICE, CONFIG_PRICE * 10];
-
   address private owner = msg.sender;
-  uint[2] private pools = [0, 0];
   uint private fees = 0;
+
+  uint[2] private PRICES = [CONFIG_PRICE, CONFIG_PRICE * 10];
+  uint[2] private pools = [0, 0];
 
   uint private result = uint(sha3(block.coinbase, block.blockhash(block.number - 1), pools[0] + pools[1], now));
   uint private seeda = LEHMER_SDA;
@@ -42,6 +42,7 @@ contract LooneyFifty {
   uint public txs = 0;
   uint public wins = 0;
   uint public losses = 0;
+  uint public played = 0;
 
   function LooneyFifty() {
   }
@@ -91,18 +92,19 @@ contract LooneyFifty {
           pwins += 1;
           pools[pidx] -= win;
           fees += fee;
-          output += win - fee + CONFIG_PRICES[pidx];
+          output += win - fee + PRICES[pidx];
         } else {
           plosses += 1;
-          pools[pidx] += CONFIG_PRICES[pidx];
+          pools[pidx] += PRICES[pidx];
         }
       }
     }
 
     wins += pwins;
     losses += plosses;
+    played += input;
 
-    NextPlayer(msg.sender, uint32(now), uint8(pwins), uint8(plosses), input, output, wins, txs);
+    NextPlayer(msg.sender, uint32(now), uint8(pwins), uint8(plosses), input, output, wins, txs, played);
 
     output += msg.value - input;
 
