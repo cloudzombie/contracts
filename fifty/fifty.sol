@@ -29,11 +29,13 @@ contract LooneyFifty {
   uint constant public CONFIG_FEES_MUL = 5;
   uint constant public CONFIG_FEES_DIV = 1000;
 
+  uint[2] private CONFIG_PRICES = [CONFIG_PRICE, CONFIG_PRICE * 10];
+
   address private owner = msg.sender;
-  uint private pool = msg.value;
+  uint[2] private pools = [0, 0];
   uint private fees = 0;
 
-  uint private result = uint(sha3(block.coinbase, block.blockhash(block.number - 1), pool, now));
+  uint private result = uint(sha3(block.coinbase, block.blockhash(block.number - 1), pools[0] + pools[1], now));
   uint private seeda = LEHMER_SDA;
   uint private seedb = LEHMER_SDB;
 
@@ -57,7 +59,7 @@ contract LooneyFifty {
 
   function() pricecheck public {
     seeda = (seeda * LEHMER_MUL) % LEHMER_MOD;
-    result = result ^ uint(sha3(block.coinbase, block.blockhash(block.number - 1), pool, seeda));
+    result = result ^ uint(sha3(block.coinbase, block.blockhash(block.number - 1), pools[0] + pools[1], seeda));
 
     uint number = 0;
 
@@ -72,25 +74,31 @@ contract LooneyFifty {
     uint pwins = 0;
     uint plosses = 0;
 
-    for (uint num = 0; num < number; num++) {
-      seedb = (seedb * LEHMER_MUL) % LEHMER_MOD;
-      result = result ^ seedb;
+    for (uint pidx = 0; pidx < 2; pidx++) {
+      uint max = number % 10;
 
-      if (result % 2 == 0) {
-        uint win = pool / 2;
-        uint fee = (win * CONFIG_FEES_MUL) / CONFIG_FEES_DIV;
+      number = number / 10;
+      txs += max;
 
-        pwins += 1;
-        pool -= win;
-        fees += fee;
-        output += win - fee + CONFIG_PRICE;
-      } else {
-        plosses += 1;
-        pool += CONFIG_PRICE;
+      for (uint num = 0; num < max; num++) {
+        seedb = (seedb * LEHMER_MUL) % LEHMER_MOD;
+        result = result ^ seedb;
+
+        if (result % 2 == 0) {
+          uint win = pools[pidx] / 2;
+          uint fee = (win * CONFIG_FEES_MUL) / CONFIG_FEES_DIV;
+
+          pwins += 1;
+          pools[pidx] -= win;
+          fees += fee;
+          output += win - fee + CONFIG_PRICES[pidx];
+        } else {
+          plosses += 1;
+          pools[pidx] += CONFIG_PRICES[pidx];
+        }
       }
     }
 
-    txs += number;
     wins += pwins;
     losses += plosses;
 

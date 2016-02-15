@@ -23,3 +23,7 @@ Two Lehmer generators are used, the first running for each transaction received 
 ## events
 
 The NextPlayer event gets sent when each transaction has been evaluated, with the input amount, output (win/loss) as well as the number of overall bets placed and the overall wins.
+
+## pools
+
+This contract utilizes 2 separate pools - one for bets (and parts of bets) < 0.09 with a ticket size of 0.01. A second pool is utilized for values in multiples of 0.1.
