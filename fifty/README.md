@@ -26,4 +26,4 @@ The NextPlayer event gets sent when each transaction has been evaluated, with th
 
 ## pools
 
-This contract utilizes 2 separate pools - one for bets (and parts of bets) < 0.09 with a ticket size of 0.01. A second pool is utilized for values in multiples of 0.1.
+This contract utilizes 3 separate pools - one for bets (and parts of bets) <= 0.09 ether with a ticket size of 0.01 ether. A second pool is utilized for values in multiples of 0.1 ether and a third for multiples of 1 ether.
