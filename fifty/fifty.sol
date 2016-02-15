@@ -28,7 +28,7 @@ contract LooneyFifty {
   uint constant public CONFIG_MAX_VALUE = CONFIG_PRICE * CONFIG_MAX_PLAYS;
   uint constant public CONFIG_FEES_MUL = 5;
   uint constant public CONFIG_FEES_DIV = 1000;
-  uint constant public CONFIG_RATIO_PRES = 3;
+  uint constant public CONFIG_RATIO_PRES = 5;
   uint constant public CONFIG_RATIO_MUL = 10 ** CONFIG_RATIO_PRES;
 
   address private owner = msg.sender;
