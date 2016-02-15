@@ -15,7 +15,7 @@ contract LooneyFifty {
     _
   }
 
-  event NextPlayer(address addr, uint32 at, uint input, uint output, uint txs);
+  event NextPlayer(address addr, uint32 at, uint input, uint output, uint txs, uint ratio);
 
   uint constant private LEHMER_MOD = 4294967291;
   uint constant private LEHMER_MUL = 279470273;
@@ -28,7 +28,7 @@ contract LooneyFifty {
   uint constant public CONFIG_MAX_VALUE = CONFIG_PRICE * CONFIG_MAX_PLAYS;
   uint constant public CONFIG_FEES_MUL = 5;
   uint constant public CONFIG_FEES_DIV = 1000;
-  uint constant public CONFIG_RATIO_PRES = 5;
+  uint constant public CONFIG_RATIO_PRES = 3;
   uint constant public CONFIG_RATIO_MUL = 10 ** CONFIG_RATIO_PRES;
 
   address private owner = msg.sender;
@@ -40,6 +40,9 @@ contract LooneyFifty {
   uint private seedb = LEHMER_SDB;
 
   uint public txs = 0;
+  uint public wins = 0;
+  uint public losses = 0;
+  uint public ratio = 0;
 
   function LooneyFifty() {
   }
@@ -77,17 +80,20 @@ contract LooneyFifty {
         uint win = pool / 2;
         uint fee = (win * CONFIG_FEES_MUL) / CONFIG_FEES_DIV;
 
+        wins += 1;
         pool -= win;
         fees += fee;
         output += win - fee + CONFIG_PRICE;
       } else {
+        losses += 1;
         pool += CONFIG_PRICE;
       }
     }
 
-    // uint ratio = (output * CONFIG_RATIO_MUL) / input;
     txs += number;
-    NextPlayer(msg.sender, uint32(now), input, output, txs);
+    ratio = (wins * CONFIG_RATIO_MUL) / txs;
+
+    NextPlayer(msg.sender, uint32(now), input, output, txs, ratio);
 
     output += msg.value - input;
 

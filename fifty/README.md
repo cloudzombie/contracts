@@ -22,7 +22,7 @@ Two Lehmer generators are used, the first running for each transaction received 
 
 ## events
 
-The NextPlayer event gets sent when each transaction has been evaluated, with the input amount, output (win/loss) as well as the number of overall bets placed.
+The NextPlayer event gets sent when each transaction has been evaluated, with the input amount, output (win/loss) as well as the number of overall bets placed and the overall win ratio.
 
 ```
   event NextPlayer(address addr, uint32 at, uint input, uint output, uint txs);
