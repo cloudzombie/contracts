@@ -19,3 +19,11 @@ Two Lehmer generators are used, the first running for each transaction received 
     if (result % 2 == 0) {
       ...
 ```
+
+## events
+
+The NextPlayer event gets sent when each transaction has been evaluated, with the input amount, output (win/loss) as well as the current pool size.
+
+```
+  event NextPlayer(address addr, uint32 at, uint input, uint output, uint pool);
+```
