@@ -22,7 +22,7 @@ contract LooneyFifty {
   uint constant private LEHMER_SDA = 1299709;
   uint constant private LEHMER_SDB = 7919;
 
-  uint constant public CONFIG_MAX_PLAYS = 100;
+  uint constant public CONFIG_MAX_PLAYS = 999;
   uint constant public CONFIG_PRICE = 10 finney;
   uint constant public CONFIG_MIN_VALUE = CONFIG_PRICE;
   uint constant public CONFIG_MAX_VALUE = CONFIG_PRICE * CONFIG_MAX_PLAYS;
@@ -32,10 +32,10 @@ contract LooneyFifty {
   address private owner = msg.sender;
   uint private fees = 0;
 
-  uint[2] private PRICES = [CONFIG_PRICE, CONFIG_PRICE * 10];
-  uint[2] private pools = [0, 0];
+  uint[3] private PRICES = [CONFIG_PRICE, CONFIG_PRICE * 10, CONFIG_PRICE * 100];
+  uint[3] private pool = [0, 0, 0];
 
-  uint private result = uint(sha3(block.coinbase, block.blockhash(block.number - 1), pools[0] + pools[1], now));
+  uint private result = uint(sha3(block.coinbase, block.blockhash(block.number - 1), now));
   uint private seeda = LEHMER_SDA;
   uint private seedb = LEHMER_SDB;
 
@@ -60,7 +60,7 @@ contract LooneyFifty {
 
   function() pricecheck public {
     seeda = (seeda * LEHMER_MUL) % LEHMER_MOD;
-    result = result ^ uint(sha3(block.coinbase, block.blockhash(block.number - 1), pools[0] + pools[1], seeda));
+    result = result ^ uint(sha3(block.coinbase, block.blockhash(block.number - 1), pool[0] + pool[1] + pool[2], seeda));
 
     uint number = 0;
 
@@ -75,7 +75,7 @@ contract LooneyFifty {
     uint pwins = 0;
     uint plosses = 0;
 
-    for (uint pidx = 0; pidx < 2; pidx++) {
+    for (uint pidx = 0; pidx < 3; pidx++) {
       uint max = number % 10;
 
       number = number / 10;
@@ -86,16 +86,16 @@ contract LooneyFifty {
         result = result ^ seedb;
 
         if (result % 2 == 0) {
-          uint win = pools[pidx] / 2;
+          uint win = pool[pidx] / 2;
           uint fee = (win * CONFIG_FEES_MUL) / CONFIG_FEES_DIV;
 
           pwins += 1;
-          pools[pidx] -= win;
+          pool[pidx] -= win;
           fees += fee;
           output += win - fee + PRICES[pidx];
         } else {
           plosses += 1;
-          pools[pidx] += PRICES[pidx];
+          pool[pidx] += PRICES[pidx];
         }
       }
     }
