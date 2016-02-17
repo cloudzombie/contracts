@@ -1,6 +1,6 @@
 // LooneyDice is a traditional dice-game (ala craps) allowing players to play market makers as well
 //
-// git: https://github.com/thelooneyfarm/contracts/tree/master/dice
+// git: https://github.com/thelooneyfarm/contracts/tree/master/src/dice
 // url: http://the.looney.farm/game/dice
 contract LooneyDice {
   // modifier for the owner protected functions
@@ -22,12 +22,12 @@ contract LooneyDice {
 
   // for each type of bet, we need to store the odds and type/testindex
   struct Test {
-    uint8 odds;
-    uint8 tidx;
+    uint8 chance;
+    uint8 test;
   }
 
   // event that fires when a new player has been made a move
-  event Player(address addr, uint32 at, byte bet, uint8 dicea, uint8 diceb, bool winner, uint input, uint output, uint txs, uint funds);
+  event Player(address addr, uint32 at, byte bet, uint8 dicea, uint8 diceb, bool winner, uint input, uint output, uint funds, uint txs, uint turnover);
 
   // number of different combinations for 2 six-sided dice
   uint constant private MAX_ROLLS = 6 * 6;
@@ -57,6 +57,10 @@ contract LooneyDice {
   uint private random = uint(sha3(block.coinbase, block.blockhash(block.number - 1), now));
   uint private seeda = LEHMER_SDA;
   uint private seedb = LEHMER_SDB;
+
+  // dices, not rolled yet...
+  uint private dicea = 0;
+  uint private diceb = 0;
 
   // based on the type of bet (Even, Odd, Sevents, etc.) map to the applicable test with odds
   mapping (byte => Test) private tests;
@@ -107,7 +111,7 @@ contract LooneyDice {
       mms.push(MM({ addr: msg.sender, value: value }));
 
       // initialize the profit pool as required
-      if (!(profits[msg.sender] > 0)) {
+      if (profits[msg.sender] == 0) {
         profits[msg.sender] = 0;
       }
     }
@@ -155,144 +159,70 @@ contract LooneyDice {
     }
   }
 
-  // intialize the tests, done here so it is close to the actual testing
+  // intialize the tests, done here so it is close to the actual test execution
   function initTests() private {
-    // key = 'bet type', odds = <odds>/36 occurences (return), tidx is the value to be tested
-    // NOTE: odds used as in divisor, i.e. evens = 36/18 = 200%, however input also gets added, so adjust
+    // key = 'bet type', odds = <odds>/36 occurences (return), test is the value to be tested
 
     // evens, 18/36
-    tests['E'] = Test({ odds: 2 * 18, tidx: 0 });
+    tests['E'] = Test({ chance: 18, test: 0 });
     tests['e'] = tests['E'];
 
     // odds, 18/36
-    tests['O'] = Test({ odds: 2 * 18, tidx: 1 });
+    tests['O'] = Test({ chance: 18, test: 1 });
     tests['o'] = tests['O'];
 
-    // snake eyes, 1/36 (for ease of calc, number tidx equals the number value)
-    tests['2'] = Test({ odds: 2 * 1, tidx: 2 });
+    // snake eyes, 1/36 (for ease of calc, number test equals the number value)
+    tests['2'] = Test({ chance: 1, test: 2 });
     tests[':'] = tests['2'];
     tests['%'] = tests['2'];
 
     // 3-6, more popular as it increases
-    tests['3'] = Test({ odds: 2 * 2, tidx: 3 });
-    tests['4'] = Test({ odds: 2 * 3, tidx: 4 });
-    tests['5'] = Test({ odds: 2 * 4, tidx: 5 });
-    tests['6'] = Test({ odds: 2 * 5, tidx: 6 });
+    tests['3'] = Test({ chance: 2, test: 3 });
+    tests['4'] = Test({ chance: 3, test: 4 });
+    tests['5'] = Test({ chance: 4, test: 5 });
+    tests['6'] = Test({ chance: 5, test: 6 });
 
     // 7, middle number, highest single number chance
-    tests['7'] = Test({ odds: 2 * 6, tidx: 7 });
+    tests['7'] = Test({ chance: 6, test: 7 });
     tests['='] = tests['7'];
 
     // 8-11, less popular as it increases
-    tests['8'] = Test({ odds: 2 * 5, tidx: 8 });
-    tests['9'] = Test({ odds: 2 * 4, tidx: 9 });
-    tests['0'] = Test({ odds: 2 * 3, tidx: 10 });
-    tests['1'] = Test({ odds: 2 * 2, tidx: 11 });
+    tests['8'] = Test({ chance: 5, test: 8 });
+    tests['9'] = Test({ chance: 4, test: 9 });
+    tests['0'] = Test({ chance: 3, test: 10 });
+    tests['1'] = Test({ chance: 2, test: 11 });
 
     // 12, the maxium value, 1/36 chance
-    tests['X'] = Test({ odds: 2 * 1, tidx: 12 });
+    tests['X'] = Test({ chance: 1, test: 12 });
     tests['x'] = tests['x'];
 
     // >7 & <7, both 15/36 chance
-    tests['>'] = Test({ odds: 2 * 15, tidx: 13 });
-    tests['<'] = Test({ odds: 2 * 15, tidx: 14 });
+    tests['>'] = Test({ chance: 15, test: 13 });
+    tests['<'] = Test({ chance: 15, test: 14 });
   }
 
-  // calculate an outcome based on the two dices, winner=bool, bettype=byte
-  function calculate(uint dicea, uint diceb) private returns (bool, byte) {
-    // grab the bet from the message and set the accociated test
-    byte bet = msg.data[0];
-    Test test = tests[bet];
-
-    // if the odds are not >0, it means we don't have a valid bettype, fall back to evens
-    if (!(test.odds > 0)) {
-      test = tests['E'];
-      bet = 'E';
-    }
-
-    // get the sum and set the initial winner state
+  // calculates the winner based on inputs & test
+  function isWinner(Test test) private returns (bool) {
+    // do the sum to see what pops outputs
     uint sum = dicea + diceb;
-    bool winner = false;
 
-    // grab the test according to the bet mapping and calculate the outcome
-    if (test.tidx >= 2 && test.tidx <= 12) {
-      winner = sum == test.tidx;
-    } else if (test.tidx == 13) {
-      winner = sum > 7;
-    } else if (test.tidx == 14) {
-      winner = sum < 7;
-    } else if (test.tidx == 1) {
-      winner = (sum % 2) == 1;
-    } else {
-      winner = (sum % 2) == 0;
+    // number matching
+    if (test.test >= 2 && test.test <= 12) {
+      return sum == test.test;
     }
 
-    // return both the winner and the bet type (as evaluated)
-    return (winner, bet);
-  }
-
-  // distribute fees, grabbing from the market-makers, allocating wins/losses as applicable
-  function distribute(bool winner, uint input, uint odds) private returns (uint) {
-    // output is 99% of the actual expected return (still lower than casinos)
-    uint output = (input * MAX_ROLLS * CONFIG_RETURN_MUL) / (odds * CONFIG_RETURN_DIV);
-    uint fee = 0;
-
-    // while we have something to allocate, do so
-    while (output > 0) {
-      // grab the current funder in the queue
-      MM funder = mms[mmidx];
-
-      // first allocate all inputs/outputs to this funder
-      uint moutput = output;
-      uint minput = input;
-
-      // ummm, expected >available, just grab what we can from this market-maker and jump to next
-      if (output >= funder.value) {
-        moutput = funder.value;
-        minput = (input * moutput) / output;
-        mmidx++;
-      }
-
-      // remove the mathed bets as applicable
-      funds -= moutput;
-      output -= moutput;
-      input -= minput;
-
-      // yes, even removed from the funder - like BetFair, the bet is matched, so not available
-      funder.value -= moutput;
-
-      // ok, we have a loser on our hands, allocate the profits to the market-maker
-      if (!winner) {
-        // fees are only applied to the actual profits made, not the total
-        fee = (minput * CONFIG_FEES_MUL) / CONFIG_FEES_DIV;
-        fees += fee;
-
-        // move the matched part & actual profit (- fee) to the profit pool for the funder
-        profits[funder.addr] += moutput + minput - fee;
-      }
+    // greater-than
+    if (test.test == 13) {
+      return sum > 7;
     }
 
-    // one more transaction
-    txs += 1;
-
-    // ding-ding, we have a winner
-    if (winner) {
-      // calculate the fees only on the won portion of the bet
-      fee = (output * CONFIG_FEES_MUL) / CONFIG_FEES_DIV;
-      fees += fee;
-
-      // we have one more win for the contract
-      wins += 1;
-
-      // return the original bet, profit (- fee)
-      return input + output - fee;
+    // less-than
+    if (test.test == 14) {
+      return sum < 7;
     }
 
-    // increment the losses
-    losses += 1;
-
-    // nothing gained, better luck next time
-    return 0;
+    // odd & even
+    return (sum % 2) == test.test;
   }
 
   // set the random number generator for the specific generation
@@ -316,6 +246,94 @@ contract LooneyDice {
     return (random % CONFIG_DICE_SIDES) + 1;
   }
 
+  // send the player event
+  function notifyPlayer(byte bet, bool winner, uint input, uint output) private {
+    // create the event
+    Player(msg.sender, uint32(now), bet, uint8(dicea), uint8(diceb), winner, input, output, funds, txs, turnover);
+  }
+
+  // distribute fees, grabbing from the market-makers, allocating wins/losses as applicable
+  function play(uint input) private returns (uint) {
+    // grab the bet from the message and set the accociated test
+    byte bet = msg.data[0];
+    Test test = tests[bet];
+
+    // if the odds are not >0, it means we don't have a valid bettype, fall back to evens
+    if (test.chance == 0) {
+      test = tests['E'];
+      bet = 'E';
+    }
+
+    // NOTE: odds used as in divisor, i.e. evens = 36/18 = 200%, however input also gets added, so adjust
+    // output is 99% of the actual expected return (still lower than casinos)
+    uint output = ((((input * MAX_ROLLS) / test.chance) - input) * CONFIG_RETURN_MUL) / CONFIG_RETURN_DIV;
+    uint overflow = 0;
+
+    // see if we have an actual winner here
+    bool winner = isWinner(test);
+
+    // grab the current funder in the queue
+    MM funder = mms[mmidx];
+
+    // ummm, expected >available, just grab what we can from this market-maker
+    if (output >= funder.value) {
+      // calculate the new partial input value
+      uint partial = (input * funder.value) / output;
+
+      // ok, so now the output is only what the funder has in the pot
+      output = funder.value;
+
+      // set the overflows and new input
+      overflow = input - partial;
+      input = partial;
+
+      // we need to move to the next market-maker
+      mmidx++;
+    }
+
+    // remove the mathed bets from the overall funds & funderlike BetFair, the bet is matched, so not available
+    funds -= output;
+    funder.value -= output;
+
+    // we will need to calculate the owner fees, either way
+    uint fee = 0;
+    uint result = 0;
+
+    // winning or losing outcome here?
+    if (winner) {
+      // calculate the fees only on the won portion of the bet
+      fee = (output * CONFIG_FEES_MUL) / CONFIG_FEES_DIV;
+
+      // use the overflow value to return
+      result = output + input - fee;
+
+      // we have one more win for the contract
+      wins += 1;
+    } else {
+      // fees are only applied to the actual profits made, not the total
+      fee = (input * CONFIG_FEES_MUL) / CONFIG_FEES_DIV;
+
+      // move the matched part & actual profit (- fee) to the profit pool for the funder
+      profits[funder.addr] += output + input - fee;
+
+      // one more loss for the record books
+      losses++;
+    }
+
+    // fees go to the owner
+    fees += fee;
+
+    // one more transaction & input climbing up
+    turnover += input;
+    txs += 1;
+
+    // notify the world of this outcome
+    notifyPlayer(bet, winner, input, result);
+
+    // ok, this is now what we owe the player
+    return result + overflow;
+  }
+
   // a simple sendTransaction with data (optional) is enought ot drive the contract
   function() public {
     // we need to comply with the actual minimum values to be allowed to play
@@ -326,34 +344,22 @@ contract LooneyDice {
     // fire up the random generator, we need some entropy in here
     randomize();
 
-    // randomly roll the dices
-    uint dicea = roll();
-    uint diceb = roll();
-
     // store the actual overflow and input value as sent by the user
-    uint overflow = 0;
+    uint output = 0;
     uint input = msg.value;
 
     // erm, more than we allow, set to the cap and make ready to return the extras
     if (input > CONFIG_MAX_VALUE) {
       input = CONFIG_MAX_VALUE;
-      overflow = msg.value - CONFIG_MAX_VALUE;
+      output = msg.value - CONFIG_MAX_VALUE;
     }
 
-    // calculate the outcome based on the dices rolled
-    bool winner = false;
-    byte bet = 0;
-    (winner, bet) = calculate(dicea, diceb);
+    // roll the dices
+    dicea = roll();
+    diceb = roll();
 
-    // distribute the winnings based on the actual odds of the play
-    uint output = distribute(winner, input, tests[bet].odds);
-
-    // notify the world of this outcome
-    Player(msg.sender, uint32(now), bet, uint8(dicea), uint8(diceb), winner, input, output, txs, funds);
-
-    // adjust the overall turnover and add overflow to player funds (if applicable)
-    turnover += input;
-    output += overflow;
+    // adjust the actual return value to send to the player
+    output += play(input);
 
     // do we need to send the player some ether, do it
     if (output > 0) {
