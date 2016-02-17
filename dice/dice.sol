@@ -107,7 +107,7 @@ contract LooneyDice {
       mms.push(MM({ addr: msg.sender, value: value }));
 
       // initialize the profit pool as required
-      if (!(profit[msg.sender] > 0)) {
+      if (!(profits[msg.sender] > 0)) {
         profits[msg.sender] = 0;
       }
     }
