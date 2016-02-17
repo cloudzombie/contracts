@@ -14,12 +14,6 @@ contract LooneyLottery {
     _
   }
 
-  // when a new person enters, we let the world know
-  event Player(address addr, uint32 at, uint32 round, uint32 tickets, uint32 numtickets, uint tktotal, uint turnover);
-
-  // when a new winner is available, let the world know
-  event Winner(address addr, uint32 at, uint32 round, uint32 numtickets, uint output);
-
   // constants for the Lehmer RNG
   uint constant private LEHMER_MOD = 4294967291;
   uint constant private LEHMER_MUL = 279470273;
@@ -84,7 +78,7 @@ contract LooneyLottery {
     // adjust the random accordingly, getting extra info from the blockchain together with the seeds
     random ^= uint(sha3(block.coinbase, block.blockhash(block.number - 1), seeda, seedb));
 
-    // adjust the second phase seed for the next iteration (i.e. non-changeable random value)
+    // adjust the second phase seed for the next iteration
     seedb = (seedb * LEHMER_MUL) % LEHMER_MOD;
   }
 
@@ -98,7 +92,7 @@ contract LooneyLottery {
 
       // send the winnings to the winner and let the world know
       players[winidx].call.value(output)();
-      Winner(players[winidx], uint32(now), uint32(round), uint32(numtickets), output);
+      notifyWinner(players[winidx], output);
 
       // reset the round, and start a new one
       numplayers = 0;
@@ -127,7 +121,7 @@ contract LooneyLottery {
     numplayers++;
 
     // let the world know that we have yet another player
-    Player(msg.sender, uint32(now), uint32(round), uint32(number), uint32(numtickets), tktotal, turnover);
+    notifyPlayer(number);
   }
 
   // we only have a default function, send an amount and it gets allocated, no ABI needed
@@ -169,5 +163,19 @@ contract LooneyLottery {
     if (overflow > 0) {
       msg.sender.call.value(overflow)();
     }
+  }
+
+  // log events
+  event Player(address addr, uint32 at, uint32 round, uint32 tickets, uint32 numtickets, uint tktotal, uint turnover);
+  event Winner(address addr, uint32 at, uint32 round, uint32 numtickets, uint output);
+
+  // notify that a new player has entered the fray
+  function notifyPlayer(uint number) private {
+    Player(msg.sender, uint32(now), uint32(round), uint32(number), uint32(numtickets), tktotal, turnover);
+  }
+
+  // create the Winner event and send it
+  function notifyWinner(address addr, uint output) private {
+    Winner(addr, uint32(now), uint32(round), uint32(numtickets), output);
   }
 }

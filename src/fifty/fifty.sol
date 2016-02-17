@@ -14,9 +14,6 @@ contract LooneyFifty {
     _
   }
 
-  // our event in the case of the next player
-  event Player(address addr, uint32 at, uint8 wins, uint8 losses, uint input, uint output, uint tkwins, uint tklosses, uint turnover);
-
   // constants for the Lehmer RNGs
   uint constant private LEHMER_MOD = 4294967291;
   uint constant private LEHMER_MUL = 279470273;
@@ -121,7 +118,7 @@ contract LooneyFifty {
     tklosses += plosses;
 
     // let the world know we have another player
-    Player(msg.sender, uint32(now), uint8(pwins), uint8(plosses), input, output, tkwins, tklosses, turnover);
+    notifyPlayer(pwins, plosses, input, output);
 
     return output;
   }
@@ -160,5 +157,13 @@ contract LooneyFifty {
     if (output > 0) {
       msg.sender.call.value(output)();
     }
+  }
+
+  // log events
+  event Player(address addr, uint32 at, uint8 wins, uint8 losses, uint input, uint output, uint tkwins, uint tklosses, uint turnover);
+
+  // notify that a new player has entered the fray
+  function notifyPlayer(uint pwins, uint plosses, uint input, uint output) private {
+    Player(msg.sender, uint32(now), uint8(pwins), uint8(plosses), input, output, tkwins, tklosses, turnover);
   }
 }
