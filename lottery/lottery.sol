@@ -15,10 +15,10 @@ contract LooneyLottery {
   }
 
   // when a new person enters, we let the world know
-  event Player(address addr, uint32 at, uint32 round, uint32 tickets, uint32 total);
+  event Player(address addr, uint32 at, uint32 round, uint32 tickets, uint32 numtickets, uint tktotal, uint turnover);
 
   // when a new winner is available, let the world know
-  event Winner(address addr, uint32 at, uint32 round, uint32 tickets);
+  event Winner(address addr, uint32 at, uint32 round, uint32 numtickets, uint output);
 
   // constants for the Lehmer RNG
   uint constant private LEHMER_MOD = 4294967291;
@@ -55,8 +55,11 @@ contract LooneyLottery {
   uint public numtickets = 0;
   uint public start = now;
   uint public end = start + CONFIG_DURATION;
+
+  // lifetime stats
   uint public txs = 0;
-  uint public tks = 0;
+  uint public tktotal = 0;
+  uint public turnover = 0;
 
   // nothing much to do in the constructor, we have the owner set & init done
   function LooneyLottery() {
@@ -91,10 +94,11 @@ contract LooneyLottery {
     if ((numplayers >= CONFIG_MAX_PLAYERS ) || ((numplayers >= CONFIG_MIN_PLAYERS ) && (now > end))) {
       // get the winner based on the number of tickets (each player has multiple tickets)
       uint winidx = tickets[random % numtickets];
+      uint output = numtickets * CONFIG_RETURN;
 
       // send the winnings to the winner and let the world know
-      players[winidx].call.value(numtickets * CONFIG_RETURN)();
-      Winner(players[winidx], uint32(now), uint32(round), uint32(numtickets));
+      players[winidx].call.value(output)();
+      Winner(players[winidx], uint32(now), uint32(round), uint32(numtickets), output);
 
       // reset the round, and start a new one
       numplayers = 0;
@@ -106,7 +110,39 @@ contract LooneyLottery {
   }
 
   // allocate tickets to the entry based on the value of the transaction
-  function buyTickets() private {
+  function allocateTickets(uint number) private {
+    // the last index of the ticket we will be adding to the pool
+    uint ticketmax = numtickets + number;
+
+    // loop through and allocate a ticket based on the number bought
+    for (uint idx = numtickets; idx < ticketmax; idx++) {
+      tickets[idx] = uint8(numplayers);
+    }
+
+    // our new value of total tickets (for this round) is the same as max, store it
+    numtickets = ticketmax;
+
+    // store the actual player info so we can reference it from the tickets
+    players[numplayers] = msg.sender;
+    numplayers++;
+
+    // let the world know that we have yet another player
+    Player(msg.sender, uint32(now), uint32(round), uint32(number), uint32(numtickets), tktotal, turnover);
+  }
+
+  // we only have a default function, send an amount and it gets allocated, no ABI needed
+  function() public {
+    // oops, we need at least 10 finney to play :(
+    if (msg.value < CONFIG_MIN_VALUE) {
+      throw;
+    }
+
+    // adjust the random value based on the pseudo rndom inputs
+    randomize();
+
+    // can we pick a winner? try anyway
+    pickWinner();
+
     // here we store the number of tickets
     uint number = 0;
 
@@ -118,44 +154,20 @@ contract LooneyLottery {
     }
 
     // overflow is the value to be returned, >max or not a multiple of min
-    uint overflow = msg.value - (number * CONFIG_PRICE);
+    uint input = number * CONFIG_PRICE;
+    uint overflow = msg.value - input;
 
-    // send it back if we have something we don't want to handle
+    // store the actual turnover, transaction increment and total tickets
+    turnover += input;
+    tktotal += number;
+    txs += 1;
+
+    // allocate the actual tickets now
+    allocateTickets(number);
+
+    // send back the overflow where applicable
     if (overflow > 0) {
       msg.sender.call.value(overflow)();
     }
-
-    // the last index of the ticket we will be adding to the pool
-    uint ticketmax = numtickets + number;
-
-    // loop through and allocate a ticket based on the number bought
-    for (uint idx = numtickets; idx < ticketmax; idx++) {
-      tickets[idx] = uint8(numplayers);
-    }
-
-    // our new value of bought tickets is the same as max, store it
-    numtickets = ticketmax;
-    tks += number;
-
-    // store this player and let the world know that we have an entry
-    players[numplayers] = msg.sender;
-    Player(msg.sender, uint32(now), uint32(round), uint32(number), uint32(numtickets));
-
-    // one more player, one more transaction
-    numplayers++;
-    txs += number;
-  }
-
-  // we only have a default function, send an amount and it gets allocated, no ABI needed
-  function() public {
-    // oops, we need at least 10 finney to play :(
-    if (msg.value < CONFIG_MIN_VALUE) {
-      throw;
-    }
-
-    // adjust the random value, see if we need a winner and buy the tickets
-    randomize();
-    pickWinner();
-    buyTickets();
   }
 }

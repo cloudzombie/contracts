@@ -10,11 +10,12 @@ contract LooneyFifty {
       throw;
     }
 
+    // function execution inserted here
     _
   }
 
   // our event in the case of the next player
-  event Player(address addr, uint32 at, uint8 pwins, uint8 plosses, uint input, uint output, uint wins, uint txs, uint turnover);
+  event Player(address addr, uint32 at, uint8 wins, uint8 losses, uint input, uint output, uint tkwins, uint tklosses, uint turnover);
 
   // constants for the Lehmer RNGs
   uint constant private LEHMER_MOD = 4294967291;
@@ -38,23 +39,24 @@ contract LooneyFifty {
   uint[3] private PRICES = [CONFIG_PRICE, CONFIG_PRICE * 10, CONFIG_PRICE * 100];
   uint[3] private pool = [0, 0, 0];
 
-  // basic initialisation for the RNG
+  // basic initialisation for the RNG, ready to go
   uint private random = uint(sha3(block.coinbase, block.blockhash(block.number - 1), now));
   uint private seeda = LEHMER_SDA;
   uint private seedb = LEHMER_SDB;
 
-  // game statistics, transactions, wins, losses & turnover
-  uint public txs = 0;
-  uint public wins = 0;
-  uint public losses = 0;
+  // lifetime game stats
+  uint public tktotal = 0;
+  uint public tkwins = 0;
+  uint public tklosses = 0;
   uint public turnover = 0;
+  uint public txs = 0;
 
   // nothing much to do in the construction, we have the owner set & init done
   function LooneyFifty() {
   }
 
   // owner-only withdrawal function
-  function ownerWithdraw() onlyowner public {
+  function ownerWithdraw() owneronly public {
     // if we have fees, send it to the owner and reset the count
     if (fees > 0) {
       owner.call.value(fees)();
@@ -71,30 +73,8 @@ contract LooneyFifty {
     random ^= uint(sha3(block.coinbase, block.blockhash(block.number - 1), pool[0] + pool[1] + pool[2], seeda));
   }
 
-  // a very simple play interface, send it ether, it does the calculations - no ABI needed
-  function() public {
-    // we really only want to play with set amounts
-    if (msg.value < CONFIG_MIN_VALUE) {
-      throw;
-    }
-
-    // adjust the random numbers
-    randomize();
-
-    // the number of total plays (based on min tickets values)
-    uint number = 0;
-
-    // set to max if above max, or calculate the tickets based on the min price
-    if (msg.value >= CONFIG_MAX_VALUE) {
-      number = CONFIG_MAX_TICKETS;
-    } else {
-      number = msg.value / CONFIG_PRICE;
-    }
-
-    // input is the playable amount, overflow is the value to be returned, >max or not a multiple of min
-    uint input = number * CONFIG_PRICE;
-    uint overflow = msg.value - input;
-
+  // play the actual round, allocating from the pools
+  function play(uint input, uint number) private returns (uint) {
     // setup the player details, ether won, the number of wins & losses
     uint output = 0;
     uint pwins = 0;
@@ -103,7 +83,13 @@ contract LooneyFifty {
     // loop through each indivisula price pool, allocating the numbers
     for (uint pidx = 0; pidx < PRICES.length; pidx++) {
       // current lower digit has a ticket for each increment
-      for (uint num = 0; num < number % 10; num++) {
+      uint max = number % 10;
+
+      // add the tickets to the overall totals
+      tktotal += max;
+
+      // allocate a win/loss for each increment we have here
+      for (uint num = 0; num < max; num++) {
         // for the inner-loops, the second Lehmer generator comes into play
         seedb = (seedb * LEHMER_MUL) % LEHMER_MOD;
         random ^= seedb;
@@ -128,19 +114,47 @@ contract LooneyFifty {
 
       // go for the next digit and record the transaction
       number = number / 10;
-      txs += max;
     }
 
-    // adjust the overall wins, losses & turnover based on what the player did
-    wins += pwins;
-    losses += plosses;
-    turnover += input;
+    // adjust the overall wins & losses based on what the player did
+    tkwins += pwins;
+    tklosses += plosses;
 
     // let the world know we have another player
-    Player(msg.sender, uint32(now), uint8(pwins), uint8(plosses), input, output, wins, txs, turnover);
+    Player(msg.sender, uint32(now), uint8(pwins), uint8(plosses), input, output, tkwins, tklosses, turnover);
 
-    // add the initial overflow to the player result
-    output += overflow;
+    return output;
+  }
+
+  // a very simple play interface, send it ether, it does the calculations - no ABI needed
+  function() public {
+    // we really only want to play with set amounts
+    if (msg.value < CONFIG_MIN_VALUE) {
+      throw;
+    }
+
+    // adjust the random numbers
+    randomize();
+
+    // the number of total plays (based on min tickets values)
+    uint number = 0;
+
+    // set to max if above max, or calculate the tickets based on the min price
+    if (msg.value >= CONFIG_MAX_VALUE) {
+      number = CONFIG_MAX_TICKETS;
+    } else {
+      number = msg.value / CONFIG_PRICE;
+    }
+
+    // input is the playable amount, overflow is the value to be returned, >max or not a multiple of min
+    uint input = number * CONFIG_PRICE;
+
+    // turnover increased, as did transactions
+    turnover += input;
+    txs += 1;
+
+    // play whatever the player gave us, include overflow for send
+    uint output = play(input, number) + (msg.value - input);
 
     // send whatever we have back to the player
     if (output > 0) {
