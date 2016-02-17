@@ -10,6 +10,7 @@ contract LooneyLottery {
       throw;
     }
 
+    // function execution inserted here
     _
   }
 
@@ -55,6 +56,7 @@ contract LooneyLottery {
   uint public start = now;
   uint public end = start + CONFIG_DURATION;
   uint public txs = 0;
+  uint public tks = 0;
 
   // nothing much to do in the constructor, we have the owner set & init done
   function LooneyLottery() {
@@ -133,12 +135,13 @@ contract LooneyLottery {
 
     // our new value of bought tickets is the same as max, store it
     numtickets = ticketmax;
+    tks += number;
 
     // store this player and let the world know that we have an entry
     players[numplayers] = msg.sender;
     Player(msg.sender, uint32(now), uint32(round), uint32(number), uint32(numtickets));
 
-    // one more entry, one more transaction
+    // one more player, one more transaction
     numplayers++;
     txs += number;
   }
