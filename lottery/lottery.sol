@@ -14,10 +14,10 @@ contract LooneyLottery {
   }
 
   // when a new person enters, we let the world know
-  event NewEntry(address addr, uint32 at, uint32 round, uint32 tickets, uint32 total);
+  event Player(address addr, uint32 at, uint32 round, uint32 tickets, uint32 total);
 
   // when a new winner is available, let the world know
-  event NewWinner(address addr, uint32 at, uint32 round, uint32 tickets);
+  event Winner(address addr, uint32 at, uint32 round, uint32 tickets);
 
   // constants for the Lehmer RNG
   uint constant private LEHMER_MOD = 4294967291;
@@ -27,8 +27,8 @@ contract LooneyLottery {
 
   // various game-related constants, also available externally
   uint constant public CONFIG_DURATION = 24 hours;
-  uint constant public CONFIG_MIN_ENTRIES = 5;
-  uint constant public CONFIG_MAX_ENTRIES = 222;
+  uint constant public CONFIG_MIN_PLAYERS  = 5;
+  uint constant public CONFIG_MAX_PLAYERS  = 222;
   uint constant public CONFIG_MAX_TICKETS = 100;
   uint constant public CONFIG_PRICE = 10 finney;
   uint constant public CONFIG_FEES = 50 szabo;
@@ -46,11 +46,11 @@ contract LooneyLottery {
 
   // we allow 222 * 100 max tickets, allocate a bit more and store the mapping of entry => address
   uint8[25000] private tickets;
-  mapping (uint => address) private entries;
+  mapping (uint => address) private players;
 
   // public game-related values
   uint public round = 1;
-  uint public numentries = 0;
+  uint public numplayers = 0;
   uint public numtickets = 0;
   uint public start = now;
   uint public end = start + CONFIG_DURATION;
@@ -86,16 +86,16 @@ contract LooneyLottery {
   // pick a random winner when the time is right
   function pickWinner() private {
     // do we have >222 players or >= 5 tickets and an expired timer
-    if ((numentries >= CONFIG_MAX_ENTRIES) || ((numentries >= CONFIG_MIN_ENTRIES) && (now > end))) {
+    if ((numplayers >= CONFIG_MAX_PLAYERS ) || ((numplayers >= CONFIG_MIN_PLAYERS ) && (now > end))) {
       // get the winner based on the number of tickets (each player has multiple tickets)
       uint winidx = tickets[result % numtickets];
 
       // send the winnings to the winner and let the world know
-      entries[winidx].call.value(numtickets * CONFIG_RETURN)();
-      NewWinner(entries[winidx], uint32(now), uint32(round), uint32(numtickets));
+      players[winidx].call.value(numtickets * CONFIG_RETURN)();
+      Winner(players[winidx], uint32(now), uint32(round), uint32(numtickets));
 
       // reset the round, and start a new one
-      numentries = 0;
+      numplayers = 0;
       numtickets = 0;
       start = now;
       end = start + CONFIG_DURATION;
@@ -128,18 +128,18 @@ contract LooneyLottery {
 
     // loop through and allocate a ticket based on the number bought
     for (uint idx = numtickets; idx < ticketmax; idx++) {
-      tickets[idx] = uint8(numentries);
+      tickets[idx] = uint8(numplayers);
     }
 
     // our new value of bought tickets is the same as max, store it
     numtickets = ticketmax;
 
-    // let the world know that we have made an entry
-    entries[numentries] = msg.sender;
-    NewEntry(msg.sender, uint32(now), uint32(round), uint32(number), uint32(numtickets));
+    // store this player and let the world know that we have an entry
+    players[numplayers] = msg.sender;
+    Player(msg.sender, uint32(now), uint32(round), uint32(number), uint32(numtickets));
 
     // one more entry, one more transaction
-    numentries++;
+    numplayers++;
     txs += number;
   }
 
