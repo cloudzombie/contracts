@@ -8,7 +8,7 @@ const through = require('through-gulp');
 
 gulp.task('default', () => {
   return gulp
-    .src(['**/*.sol'])
+    .src(['src/**/*.sol'])
     .pipe(through(function(file, encoding, callback) {
       const importrx = /import "([\_\-\.\/a-zA-Z0-9]*)";/g;
       const sources = {};
