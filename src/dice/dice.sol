@@ -1,4 +1,4 @@
-// LooneyDice is a traditional dice-game (ala craps) allowing players to play market makers as well
+// LooneyDice is a traditional dice-game (ala craps) allowing players to play market-makers as well
 //
 // git: https://github.com/thelooneyfarm/contracts/tree/master/src/dice
 // url: http://the.looney.farm/game/dice
@@ -25,9 +25,6 @@ contract LooneyDice {
     uint8 chance;
     uint8 test;
   }
-
-  // event that fires when a new player has been made a move
-  event Player(address addr, uint32 at, byte bet, uint8 dicea, uint8 diceb, bool winner, uint input, uint output, uint funds, uint txs, uint turnover);
 
   // number of different combinations for 2 six-sided dice
   uint constant private MAX_ROLLS = 6 * 6;
@@ -58,9 +55,8 @@ contract LooneyDice {
   uint private seeda = LEHMER_SDA;
   uint private seedb = LEHMER_SDB;
 
-  // dices, not rolled yet...
-  uint private dicea = 0;
-  uint private diceb = 0;
+  // dices, all uninitialized
+  uint[2] private dices = [0, 0];
 
   // based on the type of bet (Even, Odd, Sevents, etc.) map to the applicable test with odds
   mapping (byte => Test) private tests;
@@ -137,7 +133,7 @@ contract LooneyDice {
   }
 
   // allow any winnings & matched amounts to be re-invested
-  function investProfits() public {
+  function investProfit() public {
     // if we don't have enough, don't do this
     if (profits[msg.sender] < CONFIG_MIN_FUNDS) {
       throw;
@@ -148,7 +144,7 @@ contract LooneyDice {
   }
 
   // allow market-makers to withdraw their profits
-  function withdrawProfits() public {
+  function withdrawProfit() public {
     // see what they have in the kitty
     uint value = profits[msg.sender];
 
@@ -203,8 +199,8 @@ contract LooneyDice {
 
   // calculates the winner based on inputs & test
   function isWinner(Test test) private returns (bool) {
-    // do the sum to see what pops outputs
-    uint sum = dicea + diceb;
+    // ok, this is the sum, I'm sure it is useful
+    uint sum = dices[0] + dices[1];
 
     // number matching
     if (test.test >= 2 && test.test <= 12) {
@@ -232,24 +228,18 @@ contract LooneyDice {
 
     // adjust the overall random value, taking the seed, available funds & block details into account
     random ^= uint(sha3(block.coinbase, block.blockhash(block.number - 1), funds, seeda));
-  }
 
-  // rool the dice, returning a random value as the number (1-6)
-  function roll() private returns (uint) {
-    // adjust this Lehmer pseudo generator to the next value
-    seedb = (seedb * LEHMER_MUL) % LEHMER_MOD;
+    // we have 2 dices, roll both
+    for (uint idx = 0; idx < 2; idx++) {
+      // adjust this Lehmer pseudo generator to the next value
+      seedb = (seedb * LEHMER_MUL) % LEHMER_MOD;
 
-    // adjust the overall random number based on the Lehmer input value
-    random ^= seedb;
+      // adjust the overall random number based on the Lehmer input value
+      random ^= seedb;
 
-    // get the number of the side represented
-    return (random % CONFIG_DICE_SIDES) + 1;
-  }
-
-  // send the player event
-  function notifyPlayer(byte bet, bool winner, uint input, uint output) private {
-    // create the event
-    Player(msg.sender, uint32(now), bet, uint8(dicea), uint8(diceb), winner, input, output, funds, txs, turnover);
+      // get the number of the side represented
+      dices[idx] = (random % CONFIG_DICE_SIDES) + 1;
+    }
   }
 
   // distribute fees, grabbing from the market-makers, allocating wins/losses as applicable
@@ -264,16 +254,16 @@ contract LooneyDice {
       bet = 'E';
     }
 
-    // NOTE: odds used as in divisor, i.e. evens = 36/18 = 200%, however input also gets added, so adjust
-    // output is 99% of the actual expected return (still lower than casinos)
-    uint output = ((((input * MAX_ROLLS) / test.chance) - input) * CONFIG_RETURN_MUL) / CONFIG_RETURN_DIV;
-    uint overflow = 0;
-
     // see if we have an actual winner here
     bool winner = isWinner(test);
 
     // grab the current funder in the queue
     MM funder = mms[mmidx];
+
+    // NOTE: odds used as in divisor, i.e. evens = 36/18 = 200%, however input also gets added, so adjust
+    // output is 99% of the actual expected return (still lower than casinos)
+    uint output = ((((input * MAX_ROLLS) / test.chance) - input) * CONFIG_RETURN_MUL) / CONFIG_RETURN_DIV;
+    uint overflow = 0;
 
     // ummm, expected >available, just grab what we can from this market-maker
     if (output >= funder.value) {
@@ -354,10 +344,6 @@ contract LooneyDice {
       output = msg.value - CONFIG_MAX_VALUE;
     }
 
-    // roll the dices
-    dicea = roll();
-    diceb = roll();
-
     // adjust the actual return value to send to the player
     output += play(input);
 
@@ -365,5 +351,13 @@ contract LooneyDice {
     if (output > 0) {
       msg.sender.call.value(output)();
     }
+  }
+
+  // log events
+  event Player(address addr, uint32 at, byte bet, uint8 dicea, uint8 diceb, bool winner, uint input, uint output, uint funds, uint txs, uint turnover);
+
+  // send the player event, i.e. somebody has played, this is what he/she/it did
+  function notifyPlayer(byte bet, bool winner, uint input, uint output) private {
+    Player(msg.sender, uint32(now), bet, uint8(dices[0]), uint8(dices[1]), winner, input, output, funds, txs, turnover);
   }
 }
