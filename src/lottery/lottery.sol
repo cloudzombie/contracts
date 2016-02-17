@@ -1,6 +1,6 @@
 // LooneyLottery that pays out the full pool once a day
 //
-// git: https://github.com/thelooneyfarm/contracts/tree/master/lottery
+// git: https://github.com/thelooneyfarm/contracts/tree/master/src/lottery
 // url: http://the.looney.farm/game/lottery
 contract LooneyLottery {
   // modifier for the owner protected functions

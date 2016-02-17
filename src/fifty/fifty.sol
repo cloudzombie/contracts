@@ -1,6 +1,6 @@
 // LooneyFifty pays out 50% of the relevant pool, 50% of the time
 //
-// git: https://github.com/thelooneyfarm/contracts/tree/master/fifty
+// git: https://github.com/thelooneyfarm/contracts/tree/master/src/fifty
 // url: http://the.looney.farm/game/fifty
 contract LooneyFifty {
   // modifier for the owner protected functions
