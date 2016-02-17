@@ -9,7 +9,7 @@ contract LooneyDice {
     uint8 tidx;
   }
 
-  event NextPlayer(address addr, uint32 at, byte bet, uint8 dicea, uint8 diceb, bool winner, uint input, uint output, uint txs, uint funds);
+  event Player(address addr, uint32 at, byte bet, uint8 dicea, uint8 diceb, bool winner, uint input, uint output, uint txs, uint funds);
 
   uint constant private MAX_ROLLS = 36;
 
@@ -242,6 +242,6 @@ contract LooneyDice {
       msg.sender.call.value(retval)();
     }
 
-    NextPlayer(msg.sender, uint32(now), bet, uint8(dicea), uint8(diceb), winner, input, result, txs, funds);
+    Player(msg.sender, uint32(now), bet, uint8(dicea), uint8(diceb), winner, input, result, txs, funds);
   }
 }
