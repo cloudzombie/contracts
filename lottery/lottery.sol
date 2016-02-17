@@ -3,7 +3,7 @@
 // git: https://github.com/thelooneyfarm/contracts/tree/master/lottery
 // url: http://the.looney.farm/game/lottery
 contract LooneyLottery {
-  // modifier for the protected functions
+  // modifier for the owner protected functions
   modifier owneronly {
     // yeap, you need to own this contract to action it
     if (msg.sender != owner) {
@@ -25,7 +25,7 @@ contract LooneyLottery {
   uint constant private LEHMER_SDA = 1299709;
   uint constant private LEHMER_SDB = 7919;
 
-  // various game-related constants, also available externally
+  // various game-related constants, also available in the interface
   uint constant public CONFIG_DURATION = 24 hours;
   uint constant public CONFIG_MIN_PLAYERS  = 5;
   uint constant public CONFIG_MAX_PLAYERS  = 222;
@@ -39,8 +39,8 @@ contract LooneyLottery {
   // our owner, stored for owner-related functions
   address private owner = msg.sender;
 
-  // these are the values for the RNG
-  uint private result = uint(sha3(block.coinbase, block.blockhash(block.number - 1), now));
+  // basic initialisation for the RNG
+  uint private random = uint(sha3(block.coinbase, block.blockhash(block.number - 1), now));
   uint private seeda = LEHMER_SDA;
   uint private seedb = LEHMER_SDB;
 
@@ -56,7 +56,7 @@ contract LooneyLottery {
   uint public end = start + CONFIG_DURATION;
   uint public txs = 0;
 
-  // nothing much to do in the constructor
+  // nothing much to do in the constructor, we have the owner set & init done
   function LooneyLottery() {
   }
 
@@ -76,8 +76,8 @@ contract LooneyLottery {
     // calculate the next seed for the first phase
     seeda = (seeda * LEHMER_MUL) % LEHMER_MOD;
 
-    // adjust the result accordingly, getting extra info from the blockchain together with the seeds
-    result ^= uint(sha3(block.coinbase, block.blockhash(block.number - 1), this.balance, seeda ^ seedb));
+    // adjust the random accordingly, getting extra info from the blockchain together with the seeds
+    random ^= uint(sha3(block.coinbase, block.blockhash(block.number - 1), seeda, seedb));
 
     // adjust the second phase seed for the next iteration (i.e. non-changeable random value)
     seedb = (seedb * LEHMER_MUL) % LEHMER_MOD;
@@ -88,7 +88,7 @@ contract LooneyLottery {
     // do we have >222 players or >= 5 tickets and an expired timer
     if ((numplayers >= CONFIG_MAX_PLAYERS ) || ((numplayers >= CONFIG_MIN_PLAYERS ) && (now > end))) {
       // get the winner based on the number of tickets (each player has multiple tickets)
-      uint winidx = tickets[result % numtickets];
+      uint winidx = tickets[random % numtickets];
 
       // send the winnings to the winner and let the world know
       players[winidx].call.value(numtickets * CONFIG_RETURN)();
