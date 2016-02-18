@@ -6,7 +6,7 @@
 | **solidity** | v0.2.1-2016-02-13-a14185a
 | **optimization** | yes
 | **size** | 1569 bytes
-| **address** |
+| **address** | 0x2298307fa99c23f89a8b6fbde0563f4da59f4630
 
 ## bytecode
 
