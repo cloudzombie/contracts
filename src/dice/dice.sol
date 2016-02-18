@@ -55,10 +55,10 @@ contract LooneyDice {
   uint private seeda = LEHMER_SDA;
   uint private seedb = LEHMER_SDB;
 
-  // dices, all uninitialized
+  // dices, both not initialized
   uint[2] private dices = [0, 0];
 
-  // based on the type of bet (Even, Odd, Sevents, etc.) map to the applicable test with odds
+  // based on the type of bet (Even, Odd, Seven, etc.) map to the applicable test with odds
   mapping (byte => Test) private tests;
 
   // the market-makers and profits for each of them
@@ -273,7 +273,7 @@ contract LooneyDice {
       mmidx++;
     }
 
-    // remove the mathed bets from the overall funds & funderlike BetFair, the bet is matched, so not available
+    // remove the mathed bets from funds & funder (BetFair-like, when matched amount is not available anymore)
     funds -= output;
     funder.value -= output;
 
@@ -316,7 +316,7 @@ contract LooneyDice {
     return result + overflow;
   }
 
-  // a simple sendTransaction with data (optional) is enought ot drive the contract
+  // a simple sendTransaction with data (optional) is enought to drive the contract
   function() public {
     // we need to comply with the actual minimum values to be allowed to play
     if (msg.value < CONFIG_MIN_VALUE) {
