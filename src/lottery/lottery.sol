@@ -40,7 +40,7 @@ contract LooneyLottery {
   uint private seedb = LEHMER_SDB;
 
   // we allow 222 * 100 max tickets, allocate a bit more and store the mapping of entry => address
-  uint8[25000] private tickets;
+  uint8[22500] private tickets;
   mapping (uint => address) private players;
 
   // public game-related values
@@ -61,7 +61,7 @@ contract LooneyLottery {
 
   // owner withdrawal of fees
   function ownerWithdraw() owneronly public {
-    // calculate the fees collected previously (exclusing current round)
+    // calculate the fees collected previously (excluding current round)
     uint fees = this.balance - (numtickets * CONFIG_PRICE);
 
     // return it if we have someting
@@ -134,10 +134,10 @@ contract LooneyLottery {
     // adjust the random value based on the pseudo rndom inputs
     randomize();
 
-    // can we pick a winner? try anyway
+    // pick a winner at the end of a round
     pickWinner();
 
-    // here we store the number of tickets
+    // here we store the number of tickets in this transaction
     uint number = 0;
 
     // get either a max number based on the over-the-top entry or calculate based on inputs

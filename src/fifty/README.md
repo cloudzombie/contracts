@@ -1,20 +1,20 @@
 # fifty
 
-Ethereum contract for the [Looney Fifty](http://the.looney.farm/game/fifty)
+Ethereum contract for the [Looney Fifty](http://the.looney.farm/game/fifty). For the currently deployed version (as compiled), you can verify the [compiler outputs](verify.md)
 
 ## randomness
 
-The approach is adpated from what is employed in the [lottery](../lottery/README.md), so the reader should be familiar with that.
+The approach is adapted from what is employed in the [lottery](../lottery/README.md), so the reader should be familiar with that.
 
 Two Lehmer generators are used, the first running for each transaction received combining the long-running result with a mix from the coinbase and blockhash, the second for executes for each play that occurs within the transaction, adapting the overall running result chain.
 
 ```
   seeda = (seeda * LEHMER_MUL) % LEHMER_MOD;
-  result = result ^ uint(sha3(block.coinbase, block.blockhash(block.number - 1), pool, seeda));
+  result ^= uint(sha3(block.coinbase, block.blockhash(block.number - 1), pool[0] + pool[1] + pool[2], seeda));
   ...
   for (uint num = 0; num < number; num++) {
     seedb = (seedb * LEHMER_MUL) % LEHMER_MOD;
-    result = result ^ seedb;
+    result ^= seedb;
 
     if (result % 2 == 0) {
       ...
