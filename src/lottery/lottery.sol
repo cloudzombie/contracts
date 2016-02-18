@@ -52,6 +52,7 @@ contract LooneyLottery {
 
   // lifetime stats
   uint public txs = 0;
+  uint public tktotal = 0;
   uint public turnover = 0;
 
   // nothing much to do in the constructor, we have the owner set & init done
@@ -133,10 +134,10 @@ contract LooneyLottery {
     // adjust the random value based on the pseudo rndom inputs
     randomize();
 
-    // pick a winner when available
+    // pick a winner at the end of a round
     pickWinner();
 
-    // here we store the number of tickets for this transaction
+    // here we store the number of tickets in this transaction
     uint number = 0;
 
     // get either a max number based on the over-the-top entry or calculate based on inputs
@@ -150,8 +151,9 @@ contract LooneyLottery {
     uint input = number * CONFIG_PRICE;
     uint overflow = msg.value - input;
 
-    // store the actual turnover & transaction increment
+    // store the actual turnover, transaction increment and total tickets
     turnover += input;
+    tktotal += number;
     txs += 1;
 
     // allocate the actual tickets now
@@ -164,12 +166,12 @@ contract LooneyLottery {
   }
 
   // log events
-  event Player(address addr, uint32 at, uint32 round, uint32 tickets, uint32 numtickets, uint turnover);
+  event Player(address addr, uint32 at, uint32 round, uint32 tickets, uint32 numtickets, uint tktotal, uint turnover);
   event Winner(address addr, uint32 at, uint32 round, uint32 numtickets, uint output);
 
   // notify that a new player has entered the fray
   function notifyPlayer(uint number) private {
-    Player(msg.sender, uint32(now), uint32(round), uint32(number), uint32(numtickets), turnover);
+    Player(msg.sender, uint32(now), uint32(round), uint32(number), uint32(numtickets), tktotal, turnover);
   }
 
   // create the Winner event and send it
