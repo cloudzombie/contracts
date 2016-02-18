@@ -1,6 +1,6 @@
 # lottery
 
-Ethereum contract for [http://the.looney.farm/game/lottery](http://the.looney.farm/game/lottery)
+Ethereum contract for [http://the.looney.farm/game/lottery](http://the.looney.farm/game/lottery). For the currently deployed version (as compiled), you can verify the [compiler outputs](verify.md)
 
 
 ## implementation notes
@@ -33,7 +33,7 @@ On initialization of the contracts, an initial result value is set to provide a 
 We utilize 2 Lehmer generators, seeda is always calculated and used in the current block, seedb is calculated and stored for use in the next block. For the Lehmer generators, we start with seed values of [1299709 (100,000th prime)](http://www.isprimenumber.com/prime/1299709) and [7919 (1,000th prime)](http://www.isprimenumber.com/prime/7919).
 
 ```
-  uint private result = uint(sha3(block.coinbase, block.blockhash(block.number - 1), this.balance, now));
+  uint private result = uint(sha3(block.coinbase, block.blockhash(block.number - 1), now));
   uint private seeda = LEHMER_SDA;
   uint private seedb = LEHMER_SDB;
 ```
@@ -44,7 +44,7 @@ After receiving a transaction, the contract mutates the result number using the 
 
 ```
   seeda = (seeda * LEHMER_MUL) % LEHMER_MOD;
-  result = result ^ uint(sha3(block.coinbase, block.blockhash(block.number - 1), this.balance, seeda ^ seedb));
+  result ^= uint(sha3(block.coinbase, block.blockhash(block.number - 1), seeda, seedb));
   seedb = (seedb * LEHMER_MUL) % LEHMER_MOD;
 
   ...
