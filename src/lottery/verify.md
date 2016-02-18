@@ -1,7 +1,7 @@
 # fifty
 
 ||value|
-|-|-|
+|---|---|
 |**release**|(4d0a147d33fca3191b1b09fc6e84d1a7b14d3184)[https://github.com/thelooneyfarm/contracts/tree/4d0a147d33fca3191b1b09fc6e84d1a7b14d3184]|
 |**solidity**|v0.2.1-2016-02-13-a14185a|
 |**optimization**|yes|
