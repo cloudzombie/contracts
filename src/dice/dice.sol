@@ -159,42 +159,34 @@ contract LooneyDice {
   function initTests() private {
     // key = 'bet type', odds = <odds>/36 occurences (return), test is the value to be tested
 
-    // evens, 18/36
+    // evens & odds, both 18/36 chance
     tests['E'] = Test({ chance: 18, test: 0 });
-    tests['e'] = tests['E'];
-
-    // odds, 18/36
     tests['O'] = Test({ chance: 18, test: 1 });
-    tests['o'] = tests['O'];
 
-    // snake eyes, 1/36 (for ease of calc, number test equals the number value)
+    // 2-12 (no coincidence it is at same idx), chance peaks at 7, then decreases to max
     tests['2'] = Test({ chance: 1, test: 2 });
-    tests[':'] = tests['2'];
-    tests['%'] = tests['2'];
-
-    // 3-6, more popular as it increases
     tests['3'] = Test({ chance: 2, test: 3 });
     tests['4'] = Test({ chance: 3, test: 4 });
     tests['5'] = Test({ chance: 4, test: 5 });
     tests['6'] = Test({ chance: 5, test: 6 });
-
-    // 7, middle number, highest single number chance
     tests['7'] = Test({ chance: 6, test: 7 });
-    tests['='] = tests['7'];
-
-    // 8-11, less popular as it increases
     tests['8'] = Test({ chance: 5, test: 8 });
     tests['9'] = Test({ chance: 4, test: 9 });
     tests['0'] = Test({ chance: 3, test: 10 });
     tests['1'] = Test({ chance: 2, test: 11 });
-
-    // 12, the maxium value, 1/36 chance
     tests['X'] = Test({ chance: 1, test: 12 });
-    tests['x'] = tests['x'];
 
     // >7 & <7, both 15/36 chance
     tests['>'] = Test({ chance: 15, test: 13 });
     tests['<'] = Test({ chance: 15, test: 14 });
+
+    // aliasses
+    tests['e'] = tests['E'];
+    tests['o'] = tests['O'];
+    tests[':'] = tests['2'];
+    tests['%'] = tests['2'];
+    tests['='] = tests['7'];
+    tests['x'] = tests['X'];
   }
 
   // calculates the winner based on inputs & test
@@ -328,6 +320,11 @@ contract LooneyDice {
   function() public {
     // we need to comply with the actual minimum values to be allowed to play
     if (msg.value < CONFIG_MIN_VALUE) {
+      throw;
+    }
+
+    // erm, failsafe for when there are no MM funders available :(
+    if (mmidx == mms.length) {
       throw;
     }
 
