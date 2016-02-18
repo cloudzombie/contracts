@@ -61,7 +61,7 @@ contract LooneyLottery {
 
   // owner withdrawal of fees
   function ownerWithdraw() owneronly public {
-    // calculate the fees collected previously (exclusing current round)
+    // calculate the fees collected previously (excluding current round)
     uint fees = this.balance - (numtickets * CONFIG_PRICE);
 
     // return it if we have someting
