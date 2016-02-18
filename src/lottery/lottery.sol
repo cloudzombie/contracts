@@ -40,7 +40,7 @@ contract LooneyLottery {
   uint private seedb = LEHMER_SDB;
 
   // we allow 222 * 100 max tickets, allocate a bit more and store the mapping of entry => address
-  uint8[25000] private tickets;
+  uint8[22500] private tickets;
   mapping (uint => address) private players;
 
   // public game-related values
