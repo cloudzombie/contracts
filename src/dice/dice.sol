@@ -61,9 +61,8 @@ contract LooneyDice {
   // based on the type of bet (Even, Odd, Seven, etc.) map to the applicable test with odds
   mapping (byte => Test) private tests;
 
-  // the market-makers and profits for each of them
+  // the market-makers, i.e. the funding queues
   MM[] public mms;
-  mapping (address => uint) public profits;
 
   // publically available contract information
   uint public mmidx = 0;
@@ -87,35 +86,6 @@ contract LooneyDice {
     }
   }
 
-  // internal function that adds funds into the funding queue
-  function addFunds(address funder, uint value) private returns (uint) {
-    // we may have an overflow (i.e. > max), track it
-    uint overflow = 0;
-
-    // do we have something here, if so start allocation
-    if (value > 0) {
-      // more than max available, grab what we can and set the rest as overflow
-      if (value > CONFIG_MAX_FUNDS) {
-        overflow = value - CONFIG_MAX_FUNDS;
-        value = CONFIG_MAX_FUNDS;
-      }
-
-      // allocate the value to the overall available pool
-      funds += value;
-
-      // add the funder into our funding array, FIFO
-      mms.push(MM({ addr: msg.sender, value: value }));
-
-      // initialize the profit pool as required
-      if (profits[msg.sender] == 0) {
-        profits[msg.sender] = 0;
-      }
-    }
-
-    // return the overflow value, to be send/not touched/etc.
-    return overflow;
-  }
-
   // allow market-makers to add funds that is to be used for bet matching
   function invest() public {
     // we need a minimum amount to allow the funding to take place
@@ -123,35 +93,25 @@ contract LooneyDice {
       throw;
     }
 
-    // add the funds to the queue
-    uint overflow = addFunds(msg.sender, msg.value);
+    // we may have an overflow (i.e. > max), track it
+    uint overflow = 0;
+    uint value = msg.value;
+
+    // check for the overflow, adjust accordingly
+    if (value > CONFIG_MAX_FUNDS) {
+      overflow = value - CONFIG_MAX_FUNDS;
+      value = CONFIG_MAX_FUNDS;
+    }
+
+    // allocate the value to the overall available pool
+    funds += value;
+
+    // add the funder into our funding array, FIFO
+    mms.push(MM({ addr: msg.sender, value: value }));
 
     // transfer any amounts >max back to the market-maker
     if (overflow > 0) {
       msg.sender.call.value(overflow)();
-    }
-  }
-
-  // allow any winnings & matched amounts to be re-invested
-  function investProfit() public {
-    // if we don't have enough, don't do this
-    if (profits[msg.sender] < CONFIG_MIN_FUNDS) {
-      throw;
-    }
-
-    // take any overflow value and keep it as profits for the market maker
-    profits[msg.sender] = addFunds(msg.sender, profits[msg.sender]);
-  }
-
-  // allow market-makers to withdraw their profits
-  function withdrawProfit() public {
-    // see what they have in the kitty
-    uint value = profits[msg.sender];
-
-    // if we have something real, send it back
-    if (value > 0) {
-      msg.sender.call.value(value)();
-      profits[msg.sender] = 0;
     }
   }
 
@@ -180,12 +140,20 @@ contract LooneyDice {
     tests['>'] = Test({ chance: 15, test: 13 });
     tests['<'] = Test({ chance: 15, test: 14 });
 
+    // two dice are equal or not equal
+    tests['='] = Test({ chance: 6, test: 15 });
+    tests['!'] = Test({ chance: 30, test: 16 });
+
+    // single & double digits
+    tests['D'] = Test({ chance: 6, test: 17 });
+    tests['S'] = Test({ chance: 30, test: 18 });
+
     // aliasses
+    tests[':'] = tests['2'];
+    tests['d'] = tests['D'];
     tests['e'] = tests['E'];
     tests['o'] = tests['O'];
-    tests[':'] = tests['2'];
-    tests['%'] = tests['2'];
-    tests['='] = tests['7'];
+    tests['s'] = tests['S'];
     tests['x'] = tests['X'];
   }
 
@@ -207,6 +175,26 @@ contract LooneyDice {
     // less-than
     if (test.test == 14) {
       return sum < 7;
+    }
+
+    // dice are equal
+    if (test.test == 15) {
+      return dices[0] == dices[1];
+    }
+
+    // dice are not equal
+    if (test.test == 16) {
+      return dices[0] != dices[1];
+    }
+
+    // double digit sum
+    if (test.test == 16) {
+      return sum >= 10;
+    }
+
+    // single digit sum
+    if (test.test == 17) {
+      return sum < 10;
     }
 
     // odd & even
@@ -268,14 +256,7 @@ contract LooneyDice {
       // set the overflows and new input
       overflow = input - partial;
       input = partial;
-
-      // we need to move to the next market-maker
-      mmidx++;
     }
-
-    // remove the mathed bets from funds & funder (BetFair-like, when matched amount is not available anymore)
-    funds -= output;
-    funder.value -= output;
 
     // we will need to calculate the owner fees, either way
     uint fee = 0;
@@ -283,8 +264,17 @@ contract LooneyDice {
 
     // winning or losing outcome here?
     if (winner) {
-      // calculate the fees only on the won portion of the bet
+      // calculate the fees only on the profit portion of the bet
       fee = (output * CONFIG_FEES_MUL) / CONFIG_FEES_DIV;
+
+      // remove the mathed bets from total funds & market-maker
+      funds -= output;
+      funder.value -= output;
+
+      // if the funding bucket is empty, move to the next
+      if (funder.value == 0) {
+        mmidx++;
+      }
 
       // use the overflow value to return
       result = output + input - fee;
@@ -292,11 +282,11 @@ contract LooneyDice {
       // we have one more win for the contract
       wins += 1;
     } else {
-      // fees are only applied to the actual profits made, not the total
+      // fees are only applied to the actual profits made by the mm
       fee = (input * CONFIG_FEES_MUL) / CONFIG_FEES_DIV;
 
-      // move the matched part & actual profit (- fee) to the profit pool for the funder
-      profits[funder.addr] += output + input - fee;
+      // send the funder the profit
+      funder.addr.call.value(input - fee)();
 
       // one more loss for the record books
       losses++;
