@@ -119,6 +119,9 @@ contract LooneyDice {
     tests[ASCII_LOWER + ASCII_O] = tests[ASCII_O];
     tests[ASCII_LOWER + ASCII_S] = tests[ASCII_S];
     tests[ASCII_LOWER + ASCII_X] = tests[ASCII_X];
+
+    // default
+    tests[0] = tests[ASCII_E];
   }
 
   // allow the owner to withdraw his/her fees
@@ -202,12 +205,17 @@ contract LooneyDice {
     return 0;
 
     // grab the bet from the message and set the associated test
-    Test test = tests[uint8(msg.data[0])];
+    Test test = tests[0];
+
+    // if we got data, attempt to grab the actual bet
+    /*if (msg.data.length == 1) {
+      test = tests[uint8(msg.data[0])];
+    }*/
 
     // invalid type defaults to evens bet
-    if (test.bet == 0) {
-      test = tests[ASCII_E];
-    }
+    /*if (test.bet == 0) {
+      test = tests[0];
+    }*/
 
     // the actual returns that we send back to the user
     uint result = 0;
@@ -216,6 +224,11 @@ contract LooneyDice {
     if (isWinner(test)) {
       // odds used as in divisor, i.e. evens = 36/18 = 200%, however input also gets added, so adjust
       uint output = ((input * MAX_ROLLS) / test.chance) - input;
+
+      // failsafe for the case where the contract runs out of funds
+      if (output > funds) {
+        throw;
+      }
 
       // calculate the fees on the profit portion of the bet
       uint fee = output / CONFIG_FEES_DIV;
@@ -274,11 +287,6 @@ contract LooneyDice {
 
     // get the actual return value for the player
     uint output = play(input) + (msg.value - input);
-
-    // failsafe for the case where the contract runs out of funds
-    if (output > funds) {
-      throw;
-    }
 
     // do we need to send the player some ether, do it
     if (output > 0) {
