@@ -20,10 +20,11 @@ contract LooneyDice {
     uint value;
   }
 
-  // for each type of bet, we need to store the odds and type/testindex
+  // for each type of bet, chance = <odds>/36 occurences (return), test is the value to be tested
   struct Test {
-    uint8 chance;
-    uint8 test;
+    uint bet;
+    uint chance;
+    uint test;
   }
 
   // number of different combinations for 2 six-sided dice
@@ -36,9 +37,35 @@ contract LooneyDice {
   uint constant public CONFIG_MAX_FUNDS = 100 ether;
   uint constant public CONFIG_RETURN_MUL = 99; // 99/100 return, the 1% is the market-maker edge
   uint constant public CONFIG_RETURN_DIV = 100;
-  uint constant public CONFIG_FEES_MUL = 5; // 5/1000, the 0.5% goes to the owner (comm only on winnings)
-  uint constant public CONFIG_FEES_DIV = 1000;
+  uint constant public CONFIG_FEES_MUL = 1; // 5/1000 = 1/200, the 0.5% goes to the owner (comm only on winnings)
+  uint constant public CONFIG_FEES_DIV = 200; // 5/1000 = 1/200, divisor
   uint constant public CONFIG_DICE_SIDES = 6;
+
+  // go old-skool here to save on lookups (could have been a more expensive mapping)
+  uint constant private ASCII_0 = 0x30; // '0' ascii
+  uint constant private ASCII_1 = 0x31; // '1' ascii
+  uint constant private ASCII_2 = 0x32; // '2' ascii
+  uint constant private ASCII_3 = 0x33; // '3' ascii
+  uint constant private ASCII_4 = 0x34; // '4' ascii
+  uint constant private ASCII_5 = 0x35; // '5' ascii
+  uint constant private ASCII_6 = 0x36; // '6' ascii
+  uint constant private ASCII_7 = 0x37; // '7' ascii
+  uint constant private ASCII_8 = 0x38; // '8' ascii
+  uint constant private ASCII_9 = 0x39; // '9' ascii
+  uint constant private ASCII_EX = 0x21; // '!' ascii
+  uint constant private ASCII_LT = 0x3c; // '<' ascii
+  uint constant private ASCII_EQ = 0x3d; // '=' ascii
+  uint constant private ASCII_GT = 0x3e; // '>' ascii
+  uint constant private ASCII_D = 0x44; // 'D' ascii
+  uint constant private ASCII_E = 0x45; // 'E' ascii
+  uint constant private ASCII_O = 0x4f; // 'O' ascii
+  uint constant private ASCII_S = 0x53; // 'S' ascii
+  uint constant private ASCII_X = 0x58; // 'X' ascii
+  uint constant private ASCII_d = 0x64; // 'd' ascii (lowercase)
+  uint constant private ASCII_e = 0x65; // 'e' ascii (lowercase)
+  uint constant private ASCII_o = 0x6f; // 'o' ascii (lowercase)
+  uint constant private ASCII_s = 0x73; // 's' ascii (lowercase)
+  uint constant private ASCII_x = 0x78; // 'x' ascii (lowercase)
 
   // configuration for the Lehmer RNG
   uint constant private LEHMER_MOD = 4294967291;
@@ -59,7 +86,7 @@ contract LooneyDice {
   uint[2] private dices = [0, 0];
 
   // based on the type of bet (Even, Odd, Seven, etc.) map to the applicable test with odds
-  mapping (byte => Test) private tests;
+  Test[128] private tests; // cater for the 2^7 ascii range
 
   // the market-makers, i.e. the funding queues
   MM[] public mms;
@@ -117,44 +144,44 @@ contract LooneyDice {
 
   // intialize the tests, done here so it is close to the actual test execution
   function initTests() private {
-    // key = 'bet type', odds = <odds>/36 occurences (return), test is the value to be tested
-
-    // evens & odds, both 18/36 chance
-    tests['E'] = Test({ chance: 18, test: 0 });
-    tests['O'] = Test({ chance: 18, test: 1 });
+    // even & odd
+    tests[ASCII_E] = Test({ bet: ASCII_E, chance: 18, test: 0 });
+    tests[ASCII_O] = Test({ bet: ASCII_O, chance: 18, test: 1 });
 
     // 2-12 (no coincidence it is at same idx), chance peaks at 7, then decreases to max
-    tests['2'] = Test({ chance: 1, test: 2 });
-    tests['3'] = Test({ chance: 2, test: 3 });
-    tests['4'] = Test({ chance: 3, test: 4 });
-    tests['5'] = Test({ chance: 4, test: 5 });
-    tests['6'] = Test({ chance: 5, test: 6 });
-    tests['7'] = Test({ chance: 6, test: 7 });
-    tests['8'] = Test({ chance: 5, test: 8 });
-    tests['9'] = Test({ chance: 4, test: 9 });
-    tests['0'] = Test({ chance: 3, test: 10 });
-    tests['1'] = Test({ chance: 2, test: 11 });
-    tests['X'] = Test({ chance: 1, test: 12 });
+    tests[ASCII_2] = Test({ bet: ASCII_2, chance: 1, test: 2 });
+    tests[ASCII_3] = Test({ bet: ASCII_3, chance: 2, test: 3 });
+    tests[ASCII_4] = Test({ bet: ASCII_4, chance: 3, test: 4 });
+    tests[ASCII_5] = Test({ bet: ASCII_5, chance: 4, test: 5 });
+    tests[ASCII_6] = Test({ bet: ASCII_6, chance: 5, test: 6 });
+    tests[ASCII_7] = Test({ bet: ASCII_7, chance: 6, test: 7 });
+    tests[ASCII_8] = Test({ bet: ASCII_8, chance: 5, test: 8 });
+    tests[ASCII_9] = Test({ bet: ASCII_9, chance: 4, test: 9 });
+    tests[ASCII_0] = Test({ bet: ASCII_0, chance: 3, test: 10 });
+    tests[ASCII_1] = Test({ bet: ASCII_1, chance: 2, test: 11 });
+    tests[ASCII_X] = Test({ bet: ASCII_X, chance: 1, test: 12 });
 
     // >7 & <7, both 15/36 chance
-    tests['>'] = Test({ chance: 15, test: 13 });
-    tests['<'] = Test({ chance: 15, test: 14 });
+    tests[ASCII_GT] = Test({ bet: ASCII_GT, chance: 15, test: 0 });
+    tests[ASCII_LT] = Test({ bet: ASCII_LT, chance: 15, test: 0 });
 
     // two dice are equal or not equal
-    tests['='] = Test({ chance: 6, test: 15 });
-    tests['!'] = Test({ chance: 30, test: 16 });
+    tests[ASCII_EQ] = Test({ bet: ASCII_EQ, chance: 6, test: 0 });
+    tests[ASCII_EX] = Test({ bet: ASCII_EX, chance: 30, test: 0 });
 
     // single & double digits
-    tests['D'] = Test({ chance: 6, test: 17 });
-    tests['S'] = Test({ chance: 30, test: 18 });
+    tests[ASCII_D] = Test({ bet: ASCII_D, chance: 6, test: 0 });
+    tests[ASCII_S] = Test({ bet: ASCII_S, chance: 30, test: 0 });
 
-    // aliasses
-    tests[':'] = tests['2'];
-    tests['d'] = tests['D'];
-    tests['e'] = tests['E'];
-    tests['o'] = tests['O'];
-    tests['s'] = tests['S'];
-    tests['x'] = tests['X'];
+    // lowercase
+    tests[ASCII_d] = tests[ASCII_D];
+    tests[ASCII_e] = tests[ASCII_E];
+    tests[ASCII_o] = tests[ASCII_O];
+    tests[ASCII_s] = tests[ASCII_E];
+    tests[ASCII_x] = tests[ASCII_X];
+
+    // failsafe, nothing passed in as message data, then we do the default evens
+    tests[0x00] = tests[ASCII_E];
   }
 
   // calculates the winner based on inputs & test
@@ -163,37 +190,37 @@ contract LooneyDice {
     uint sum = dices[0] + dices[1];
 
     // number matching
-    if (test.test >= 2 && test.test <= 12) {
+    if (test.test >= 2) {
       return sum == test.test;
     }
 
     // greater-than
-    if (test.test == 13) {
+    if (test.bet == ASCII_GT) {
       return sum > 7;
     }
 
     // less-than
-    if (test.test == 14) {
+    if (test.bet == ASCII_LT) {
       return sum < 7;
     }
 
     // dice are equal
-    if (test.test == 15) {
+    if (test.bet == ASCII_EQ) {
       return dices[0] == dices[1];
     }
 
     // dice are not equal
-    if (test.test == 16) {
+    if (test.bet == ASCII_EX) {
       return dices[0] != dices[1];
     }
 
     // double digit sum
-    if (test.test == 16) {
+    if (test.bet == ASCII_D) {
       return sum >= 10;
     }
 
     // single digit sum
-    if (test.test == 17) {
+    if (test.bet == ASCII_S) {
       return sum < 10;
     }
 
@@ -225,13 +252,11 @@ contract LooneyDice {
   // distribute fees, grabbing from the market-makers, allocating wins/losses as applicable
   function play(uint input) private returns (uint) {
     // grab the bet from the message and set the accociated test
-    byte bet = msg.data[0];
-    Test test = tests[bet];
+    Test test = tests[uint(msg.data[0])];
 
-    // if the odds are not >0, it means we don't have a valid bettype, fall back to evens
-    if (test.chance == 0) {
-      test = tests['E'];
-      bet = 'E';
+    // we weren't able to get the type, do nothing
+    if (test.bet == 0x00) {
+      throw;
     }
 
     // see if we have an actual winner here
@@ -265,7 +290,7 @@ contract LooneyDice {
     // winning or losing outcome here?
     if (winner) {
       // calculate the fees only on the profit portion of the bet
-      fee = (output * CONFIG_FEES_MUL) / CONFIG_FEES_DIV;
+      fee = output / CONFIG_FEES_DIV;
 
       // remove the mathed bets from total funds & market-maker
       funds -= output;
@@ -283,7 +308,7 @@ contract LooneyDice {
       wins += 1;
     } else {
       // fees are only applied to the actual profits made by the mm
-      fee = (input * CONFIG_FEES_MUL) / CONFIG_FEES_DIV;
+      fee = input / CONFIG_FEES_DIV;
 
       // send the funder the profit
       funder.addr.call.value(input - fee)();
@@ -300,7 +325,7 @@ contract LooneyDice {
     txs += 1;
 
     // notify the world of this outcome
-    notifyPlayer(bet, winner, input, result);
+    notifyPlayer(test, winner, input, result);
 
     // ok, this is now what we owe the player
     return result + overflow;
@@ -344,7 +369,7 @@ contract LooneyDice {
   event Player(address addr, uint32 at, byte bet, uint8 dicea, uint8 diceb, bool winner, uint input, uint output, uint funds, uint txs, uint turnover);
 
   // send the player event, i.e. somebody has played, this is what he/she/it did
-  function notifyPlayer(byte bet, bool winner, uint input, uint output) private {
-    Player(msg.sender, uint32(now), bet, uint8(dices[0]), uint8(dices[1]), winner, input, output, funds, txs, turnover);
+  function notifyPlayer(Test test, bool winner, uint input, uint output) private {
+    Player(msg.sender, uint32(now), byte(test.bet), uint8(dices[0]), uint8(dices[1]), winner, input, output, funds, txs, turnover);
   }
 }
