@@ -1,4 +1,4 @@
-// LooneyDice is a traditional dice-game (ala craps) allowing players to play market-makers as well
+// LooneyDice is a traditional dice-game (ala craps), allowing bets on the outcomes of a 2 dice throw
 //
 // git: https://github.com/thelooneyfarm/contracts/tree/master/src/dice
 // url: http://the.looney.farm/game/dice
@@ -14,12 +14,6 @@ contract LooneyDice {
     _
   }
 
-  // store the actual market-makers in the contract, so we know how much and who
-  struct MM {
-    address addr;
-    uint value;
-  }
-
   // for each type of bet, chance = <odds>/36 occurences (return), test is the value to be tested
   struct Test {
     uint bet;
@@ -33,10 +27,6 @@ contract LooneyDice {
   // game configuration, also available extrenally for queries
   uint constant public CONFIG_MIN_VALUE = 10 finney;
   uint constant public CONFIG_MAX_VALUE = 1 ether;
-  uint constant public CONFIG_MIN_FUNDS = 1 ether;
-  uint constant public CONFIG_MAX_FUNDS = 100 ether;
-  uint constant public CONFIG_RETURN_MUL = 99; // 99/100 return, the 1% is the market-maker edge
-  uint constant public CONFIG_RETURN_DIV = 100;
   uint constant public CONFIG_FEES_MUL = 1; // 5/1000 = 1/200, the 0.5% goes to the owner (comm only on winnings)
   uint constant public CONFIG_FEES_DIV = 200; // 5/1000 = 1/200, divisor
   uint constant public CONFIG_DICE_SIDES = 6;
@@ -85,11 +75,7 @@ contract LooneyDice {
   // based on the type of bet (Even, Odd, Seven, etc.) map to the applicable test with odds
   Test[128] private tests; // cater for printable ascii range
 
-  // the market-makers, i.e. the funding queues
-  MM[] public mms;
-
   // publically available contract information
-  uint public mmidx = 0;
   uint public funds = 0;
   uint public turnover = 0;
   uint public wins = 0;
@@ -148,31 +134,16 @@ contract LooneyDice {
   }
 
   // allow market-makers to add funds that is to be used for bet matching
-  function invest() public {
-    // we need a minimum amount to allow the funding to take place
-    if (msg.value < CONFIG_MIN_FUNDS) {
-      throw;
-    }
-
-    // we may have an overflow (i.e. > max), track it
-    uint overflow = 0;
-    uint value = msg.value;
-
-    // check for the overflow, adjust accordingly
-    if (value > CONFIG_MAX_FUNDS) {
-      overflow = value - CONFIG_MAX_FUNDS;
-      value = CONFIG_MAX_FUNDS;
-    }
-
+  function ownerInvestPool() owneronly public {
     // allocate the value to the overall available pool
-    funds += value;
+    funds += msg.value;
+  }
 
-    // add the funder into our funding array, FIFO
-    mms.push(MM({ addr: msg.sender, value: value }));
-
-    // transfer any amounts >max back to the market-maker
-    if (overflow > 0) {
-      msg.sender.call.value(overflow)();
+  // allow withdrawal of investment
+  function ownerWithdrawPool() owneronly public {
+    if (funds > 0) {
+      owner.call.value(funds)();
+      funds = 0;
     }
   }
 
@@ -245,57 +216,38 @@ contract LooneyDice {
       throw;
     }
 
-    // NOTE: odds used as in divisor, i.e. evens = 36/18 = 200%, however input also gets added, so adjust
-    // output is 99% of the actual expected return
-    uint output = ((((input * MAX_ROLLS) / test.chance) - input) * CONFIG_RETURN_MUL) / CONFIG_RETURN_DIV;
-
-    // grab the current funder in the queue
-    MM funder = mms[mmidx];
-
-    // see if we can afford to pay for this (we only accept bets we can potentially cover)
-    if (output > funds) {
-      throw;
-    }
-
-    // we will need to calculate the owner fees, either way
-    uint fee = 0;
+    // the actual returns that we send back to the user
     uint result = 0;
 
-    // see if we have an actual winner here
-    bool winner = isWinner(test);
-
     // winning or losing outcome here?
-    if (winner) {
-      // calculate the fees only on the profit portion of the bet
-      fee = output / CONFIG_FEES_DIV;
+    if (isWinner(test)) {
+      // odds used as in divisor, i.e. evens = 36/18 = 200%, however input also gets added, so adjust
+      uint output = ((input * MAX_ROLLS) / test.chance) - input;
 
-      // remove the mathed bets from total funds & market-maker
-      funds -= output;
-      funder.value -= output;
-
-      // if the funding bucket is empty, move to the next
-      if (funder.value == 0) {
-        mmidx++;
+      // failsafe for the case where the contract balance it too low
+      if (output > funds) {
+        throw;
       }
 
-      // use the overflow value to return
+      // calculate the fees on the profit portion of the bet
+      uint fee = output / CONFIG_FEES_DIV;
+
+      // remove the mathed bets from total funds
+      funds -= output;
+      fees += fee;
+
+      // set the actual return amount, including the original stake
       result = output + input - fee;
 
       // we have one more win for the contract
       wins += 1;
     } else {
-      // fees are only applied to the actual profits made by the mm
-      fee = input / CONFIG_FEES_DIV;
-
-      // send the funder the profit
-      funder.addr.call.value(input - fee)();
+      // send the lost amount to the pool
+      funds += input;
 
       // one more loss for the record books
       losses++;
     }
-
-    // fees go to the owner
-    fees += fee;
 
     // notify the world of this outcome
     notifyPlayer(test.bet, input, result);
@@ -308,11 +260,6 @@ contract LooneyDice {
   function() public {
     // we need to comply with the actual minimum values to be allowed to play
     if (msg.value < CONFIG_MIN_VALUE) {
-      throw;
-    }
-
-    // erm, failsafe for when there are no MM funders available :(
-    if (mmidx == mms.length) {
       throw;
     }
 
