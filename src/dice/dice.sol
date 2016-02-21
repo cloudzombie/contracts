@@ -73,7 +73,7 @@ contract LooneyDice {
   uint private diceb = 0;
 
   // based on the type of bet (Even, Odd, Seven, etc.) map to the applicable test with odds
-  Test[256] private tests; // sparsely populated array...
+  mapping (uint => Test) private tests;
 
   // publically available contract information
   uint public funds = 0;
