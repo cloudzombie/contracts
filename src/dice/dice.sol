@@ -42,6 +42,7 @@ contract LooneyDice {
   uint constant public CONFIG_DICE_SIDES = 6;
 
   // go old-skool here to save on lookups (could have been a more expensive mapping)
+  uint constant private ASCII_LOWER = 0x20; // added to uppercase to convert to lower
   uint constant private ASCII_0 = 0x30; // '0' ascii
   uint constant private ASCII_1 = 0x31; // '1' ascii
   uint constant private ASCII_2 = 0x32; // '2' ascii
@@ -61,11 +62,6 @@ contract LooneyDice {
   uint constant private ASCII_O = 0x4f; // 'O' ascii
   uint constant private ASCII_S = 0x53; // 'S' ascii
   uint constant private ASCII_X = 0x58; // 'X' ascii
-  uint constant private ASCII_d = 0x64; // 'd' ascii (lowercase)
-  uint constant private ASCII_e = 0x65; // 'e' ascii (lowercase)
-  uint constant private ASCII_o = 0x6f; // 'o' ascii (lowercase)
-  uint constant private ASCII_s = 0x73; // 's' ascii (lowercase)
-  uint constant private ASCII_x = 0x78; // 'x' ascii (lowercase)
 
   // configuration for the Lehmer RNG
   uint constant private LEHMER_MOD = 4294967291;
@@ -174,11 +170,11 @@ contract LooneyDice {
     tests[ASCII_S] = Test({ bet: ASCII_S, chance: 30, test: 0 });
 
     // lowercase
-    tests[ASCII_d] = tests[ASCII_D];
-    tests[ASCII_e] = tests[ASCII_E];
-    tests[ASCII_o] = tests[ASCII_O];
-    tests[ASCII_s] = tests[ASCII_E];
-    tests[ASCII_x] = tests[ASCII_X];
+    tests[ASCII_LOWER + ASCII_D] = tests[ASCII_D];
+    tests[ASCII_LOWER + ASCII_E] = tests[ASCII_E];
+    tests[ASCII_LOWER + ASCII_O] = tests[ASCII_O];
+    tests[ASCII_LOWER + ASCII_S] = tests[ASCII_S];
+    tests[ASCII_LOWER + ASCII_X] = tests[ASCII_X];
 
     // failsafe, nothing passed in as message data, then we do the default evens
     tests[0x00] = tests[ASCII_E];
@@ -188,11 +184,6 @@ contract LooneyDice {
   function isWinner(Test test) private returns (bool) {
     // ok, this is the sum, I'm sure it is useful
     uint sum = dices[0] + dices[1];
-
-    // number matching
-    if (test.test >= 2) {
-      return sum == test.test;
-    }
 
     // greater-than
     if (test.bet == ASCII_GT) {
@@ -224,8 +215,24 @@ contract LooneyDice {
       return sum < 10;
     }
 
+    // number matching
+    if (test.test >= 2) {
+      return sum == test.test;
+    }
+
     // odd & even
     return (sum % 2) == test.test;
+  }
+
+  function roll() private returns (uint) {
+    // adjust this Lehmer pseudo generator to the next value
+    seedb = (seedb * LEHMER_MUL) % LEHMER_MOD;
+
+    // adjust the overall random number based on the Lehmer input value
+    random ^= seedb;
+
+    // return the number of the side represented
+    return (random % CONFIG_DICE_SIDES) + 1;
   }
 
   // set the random number generator for the specific generation
@@ -236,17 +243,9 @@ contract LooneyDice {
     // adjust the overall random value, taking the seed, available funds & block details into account
     random ^= uint(sha3(block.coinbase, block.blockhash(block.number - 1), funds, seeda));
 
-    // we have 2 dices, roll both
-    for (uint idx = 0; idx < 2; idx++) {
-      // adjust this Lehmer pseudo generator to the next value
-      seedb = (seedb * LEHMER_MUL) % LEHMER_MOD;
-
-      // adjust the overall random number based on the Lehmer input value
-      random ^= seedb;
-
-      // get the number of the side represented
-      dices[idx] = (random % CONFIG_DICE_SIDES) + 1;
-    }
+    // roll the dices, effectively using the second generator
+    dices[0] = roll();
+    dices[1] = roll();
   }
 
   // distribute fees, grabbing from the market-makers, allocating wins/losses as applicable
@@ -255,7 +254,7 @@ contract LooneyDice {
     Test test = tests[uint(msg.data[0])];
 
     // we weren't able to get the type, do nothing
-    if (test.bet == 0x00) {
+    if (test.bet == 0) {
       throw;
     }
 
