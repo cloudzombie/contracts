@@ -119,9 +119,6 @@ contract LooneyDice {
     tests[ASCII_LOWER + ASCII_O] = tests[ASCII_O];
     tests[ASCII_LOWER + ASCII_S] = tests[ASCII_S];
     tests[ASCII_LOWER + ASCII_X] = tests[ASCII_X];
-
-    // failsafe, nothing passed in as message data, then we do the default evens
-    tests[0] = tests[ASCII_E];
   }
 
   // allow the owner to withdraw his/her fees
@@ -131,12 +128,6 @@ contract LooneyDice {
       owner.call.value(fees)();
       fees = 0;
     }
-  }
-
-  // allow market-makers to add funds that is to be used for bet matching
-  function ownerInvestPool() owneronly public {
-    // allocate the value to the overall available pool
-    funds += msg.value;
   }
 
   // allow withdrawal of investment
@@ -208,12 +199,12 @@ contract LooneyDice {
 
   // distribute fees, grabbing from the market-makers, allocating wins/losses as applicable
   function play(uint input) private returns (uint) {
-    // grab the bet from the message and set the accociated test
+    // grab the bet from the message and set the associated test
     Test test = tests[uint8(msg.data[0])];
 
-    // we weren't able to retrieve the type, do nothing
+    // invalid type defaults to evens bet
     if (test.bet == 0) {
-      throw;
+      test = tests[ASCII_E];
     }
 
     // the actual returns that we send back to the user
@@ -223,11 +214,6 @@ contract LooneyDice {
     if (isWinner(test)) {
       // odds used as in divisor, i.e. evens = 36/18 = 200%, however input also gets added, so adjust
       uint output = ((input * MAX_ROLLS) / test.chance) - input;
-
-      // failsafe for the case where the contract balance it too low
-      if (output > funds) {
-        throw;
-      }
 
       // calculate the fees on the profit portion of the bet
       uint fee = output / CONFIG_FEES_DIV;
@@ -258,6 +244,12 @@ contract LooneyDice {
 
   // a simple sendTransaction with data (optional) is enought to drive the contract
   function() public {
+    // owner sends his value to the funding pool
+    if (msg.sender == owner) {
+      funds += msg.value;
+      return;
+    }
+
     // we need to comply with the actual minimum values to be allowed to play
     if (msg.value < CONFIG_MIN_VALUE) {
       throw;
@@ -280,6 +272,11 @@ contract LooneyDice {
 
     // get the actual return value for the player
     uint output = play(input) + (msg.value - input);
+
+    // failsafe for the case where the contract balance it too low
+    if (output > funds) {
+      throw;
+    }
 
     // do we need to send the player some ether, do it
     if (output > 0) {
