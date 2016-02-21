@@ -202,8 +202,6 @@ contract LooneyDice {
 
   // distribute fees, grabbing from the market-makers, allocating wins/losses as applicable
   function play(uint input) private returns (uint) {
-    return 0;
-
     // grab the bet from the message and set the associated test
     Test test = tests[0];
 
@@ -250,6 +248,10 @@ contract LooneyDice {
       losses++;
     }
 
+    // one more transaction & input climbing up
+    turnover += input;
+    txs += 1;
+
     // notify the world of this outcome
     notifyPlayer(test.bet, input, result);
 
@@ -280,10 +282,6 @@ contract LooneyDice {
     if (input > CONFIG_MAX_VALUE) {
       input = CONFIG_MAX_VALUE;
     }
-
-    // one more transaction & input climbing up
-    turnover += input;
-    txs += 1;
 
     // get the actual return value for the player
     uint output = play(input) + (msg.value - input);
