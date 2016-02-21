@@ -73,7 +73,7 @@ contract LooneyDice {
   uint private diceb = 0;
 
   // based on the type of bet (Even, Odd, Seven, etc.) map to the applicable test with odds
-  Test[128] private tests; // cater for printable ascii range
+  Test[256] private tests; // sparsely populated array...
 
   // publically available contract information
   uint public funds = 0;
@@ -206,14 +206,14 @@ contract LooneyDice {
     Test test = tests[0];
 
     // if we got data, attempt to grab the actual bet
-    /*if (msg.data.length == 1) {
+    if (msg.data.length == 1) {
       test = tests[uint8(msg.data[0])];
-    }*/
+    }
 
     // invalid type defaults to evens bet
-    /*if (test.bet == 0) {
+    if (test.bet == 0) {
       test = tests[0];
-    }*/
+    }
 
     // the actual returns that we send back to the user
     uint result = 0;
@@ -293,10 +293,10 @@ contract LooneyDice {
   }
 
   // log events
-  event Player(address addr, uint32 at, uint8 bet, uint8 dice, uint input, uint output, uint wins, uint txs, uint turnover);
+  event Player(address addr, uint32 at, uint8 bet, uint8 dicea, uint8 diceb, uint input, uint output, uint wins, uint txs, uint turnover);
 
   // send the player event, i.e. somebody has played, this is what he/she/it did
   function notifyPlayer(uint bet, uint input, uint output) private {
-    Player(msg.sender, uint32(now), uint8(bet), uint8((dicea * 0xf) + diceb), input, output, wins, txs, turnover);
+    Player(msg.sender, uint32(now), uint8(bet), uint8(dicea), uint8(diceb), input, output, wins, txs, turnover);
   }
 }
