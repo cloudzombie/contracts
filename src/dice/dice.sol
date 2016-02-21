@@ -199,6 +199,8 @@ contract LooneyDice {
 
   // distribute fees, grabbing from the market-makers, allocating wins/losses as applicable
   function play(uint input) private returns (uint) {
+    return 0;
+
     // grab the bet from the message and set the associated test
     Test test = tests[uint8(msg.data[0])];
 
@@ -273,7 +275,7 @@ contract LooneyDice {
     // get the actual return value for the player
     uint output = play(input) + (msg.value - input);
 
-    // failsafe for the case where the contract balance it too low
+    // failsafe for the case where the contract runs out of funds
     if (output > funds) {
       throw;
     }
