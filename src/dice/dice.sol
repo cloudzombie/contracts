@@ -187,11 +187,11 @@ contract LooneyDice {
     uint sum = dicea + diceb;
 
     // greater-than/less-than
-    /*if (test.bet == ASCII_GT) {
+    if (test.bet == ASCII_GT) {
       return sum > 7;
     } else if (test.bet == ASCII_LT) {
       return sum < 7;
-    }*/
+    }
 
     // dice are equal/not equal
     if (test.bet == ASCII_EQ) {
@@ -201,11 +201,11 @@ contract LooneyDice {
     }
 
     // double/single digit sum
-    /*if (test.bet == ASCII_D) {
+    if (test.bet == ASCII_D) {
       return sum >= 10;
     } else if (test.bet == ASCII_S) {
       return sum < 10;
-    }*/
+    }
 
     // number matching
     if (test.test >= 2) {
