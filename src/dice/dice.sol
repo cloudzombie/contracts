@@ -177,43 +177,38 @@ contract LooneyDice {
   }
 
   // calculates the winner based on inputs & test
-  function isWinner(Test test) private returns (bool) {
+  function isWinner(Test test) constant private returns (bool) {
     // ok, this is the sum, quite useful for the next ones
     uint sum = dicea + diceb;
-    bool winner = false;
 
     // number matching
     if (test.test >= 2) {
-      winner = sum == test.test;
+      return sum == test.test;
     }
 
     // dice are equal/not equal
     else if (test.bet == ASCII_EQ) {
-      winner = dicea == diceb;
+      return dicea == diceb;
     } else if (test.bet == ASCII_EX) {
-      winner = dicea != diceb;
+      return dicea != diceb;
     }
 
     // greater-than/less-than
     else if (test.bet == ASCII_GT) {
-      winner = sum > 7;
+      return sum > 7;
     } else if (test.bet == ASCII_LT) {
-      winner = sum < 7;
+      return sum < 7;
     }
 
     // double/single digit sum
     else if (test.bet == ASCII_D) {
-      winner = sum >= 10;
+      return sum >= 10;
     } else if (test.bet == ASCII_S) {
-      winner = sum < 10;
+      return sum < 10;
     }
 
     // odd & even
-    else {
-      winner = (sum % 2) == test.test;
-    }
-
-    return winner;
+    return (sum % 2) == test.test;
   }
 
   function roll() private returns (uint) {
@@ -243,7 +238,7 @@ contract LooneyDice {
   // distribute fees, grabbing from the market-makers, allocating wins/losses as applicable
   function play(uint input) private returns (uint) {
     // grab the bet from the message and set the accociated test
-    Test test = tests[uint(msg.data[0])];
+    Test test = tests[uint8(msg.data[0])];
 
     // we weren't able to retrieve the type, do nothing
     if (test.bet == 0) {
@@ -253,9 +248,6 @@ contract LooneyDice {
     // NOTE: odds used as in divisor, i.e. evens = 36/18 = 200%, however input also gets added, so adjust
     // output is 99% of the actual expected return
     uint output = ((((input * MAX_ROLLS) / test.chance) - input) * CONFIG_RETURN_MUL) / CONFIG_RETURN_DIV;
-
-    // see if we have an actual winner here
-    bool winner = isWinner(test);
 
     // grab the current funder in the queue
     MM funder = mms[mmidx];
@@ -268,6 +260,9 @@ contract LooneyDice {
     // we will need to calculate the owner fees, either way
     uint fee = 0;
     uint result = 0;
+
+    // see if we have an actual winner here
+    bool winner = isWinner(test);
 
     // winning or losing outcome here?
     if (winner) {
@@ -303,7 +298,7 @@ contract LooneyDice {
     fees += fee;
 
     // notify the world of this outcome
-    notifyPlayer(test.bet, winner, input, result);
+    notifyPlayer(test.bet, input, result);
 
     // ok, this is now what we owe the player
     return result;
@@ -324,22 +319,20 @@ contract LooneyDice {
     // fire up the random generator, we need some entropy in here
     randomize();
 
-    // store the actual overflow and input value as sent by the user
-    uint output = 0;
+    // keep track of the input value as sent by the user
     uint input = msg.value;
 
     // erm, more than we allow, set to the cap and make ready to return the extras
     if (input > CONFIG_MAX_VALUE) {
       input = CONFIG_MAX_VALUE;
-      output = msg.value - CONFIG_MAX_VALUE;
     }
-
-    // adjust the actual return value to send to the player
-    output += play(input);
 
     // one more transaction & input climbing up
     turnover += input;
     txs += 1;
+
+    // get the actual return value for the player
+    uint output = play(input) + (msg.value - input);
 
     // do we need to send the player some ether, do it
     if (output > 0) {
@@ -348,10 +341,10 @@ contract LooneyDice {
   }
 
   // log events
-  event Player(address addr, uint32 at, byte bet, uint8 dicea, uint8 diceb, bool winner, uint input, uint output, uint funds, uint txs, uint turnover);
+  event Player(address addr, uint32 at, uint8 bet, uint8 dice, uint input, uint output, uint wins, uint txs, uint turnover);
 
   // send the player event, i.e. somebody has played, this is what he/she/it did
-  function notifyPlayer(uint bet, bool winner, uint input, uint output) private {
-    Player(msg.sender, uint32(now), byte(bet), uint8(dicea), uint8(diceb), winner, input, output, funds, txs, turnover);
+  function notifyPlayer(uint bet, uint input, uint output) private {
+    Player(msg.sender, uint32(now), uint8(bet), uint8((dicea * 0xf) + diceb), input, output, wins, txs, turnover);
   }
 }
