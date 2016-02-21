@@ -186,35 +186,26 @@ contract LooneyDice {
     // ok, this is the sum, I'm sure it is useful...
     uint sum = dicea + diceb;
 
-    // greater-than
-    if (test.bet == ASCII_GT) {
+    // greater-than/less-than
+    /*if (test.bet == ASCII_GT) {
       return sum > 7;
-    }
-
-    // less-than
-    if (test.bet == ASCII_LT) {
+    } else if (test.bet == ASCII_LT) {
       return sum < 7;
-    }
+    }*/
 
-    // dice are equal
+    // dice are equal/not equal
     if (test.bet == ASCII_EQ) {
       return dicea == diceb;
-    }
-
-    // dice are not equal
-    if (test.bet == ASCII_EX) {
+    } else if (test.bet == ASCII_EX) {
       return dicea != diceb;
     }
 
-    // double digit sum
-    if (test.bet == ASCII_D) {
+    // double/single digit sum
+    /*if (test.bet == ASCII_D) {
       return sum >= 10;
-    }
-
-    // single digit sum
-    if (test.bet == ASCII_S) {
+    } else if (test.bet == ASCII_S) {
       return sum < 10;
-    }
+    }*/
 
     // number matching
     if (test.test >= 2) {
@@ -252,7 +243,7 @@ contract LooneyDice {
   // distribute fees, grabbing from the market-makers, allocating wins/losses as applicable
   function play(uint input) private returns (uint) {
     // grab the bet from the message and set the accociated test
-    Test memory test = tests[uint(msg.data[0])];
+    Test test = tests[uint(msg.data[0])];
 
     // we weren't able to get the type, do nothing
     if (test.bet == 0) {
