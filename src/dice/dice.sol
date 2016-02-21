@@ -252,8 +252,8 @@ contract LooneyDice {
     // grab the current funder in the queue
     MM funder = mms[mmidx];
 
-    // see if we can afford to pay for this (if it wins, we only accept bets we can potentially cover)
-    if (output > funder.value) {
+    // see if we can afford to pay for this (we only accept bets we can potentially cover)
+    if (output > funds) {
       throw;
     }
 
@@ -322,7 +322,7 @@ contract LooneyDice {
     // keep track of the input value as sent by the user
     uint input = msg.value;
 
-    // erm, more than we allow, set to the cap and make ready to return the extras
+    // erm, more than we allow, set to the cap (extras to be returned)
     if (input > CONFIG_MAX_VALUE) {
       input = CONFIG_MAX_VALUE;
     }
