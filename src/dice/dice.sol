@@ -98,7 +98,44 @@ contract LooneyDice {
 
   // basic constructor, since the initial values are set, just do something for the test/bet types
   function LooneyDice() {
-    initTests();
+    // even & odd
+    tests[ASCII_E] = Test({ bet: ASCII_E, chance: 18, test: 0 });
+    tests[ASCII_O] = Test({ bet: ASCII_O, chance: 18, test: 1 });
+
+    // 2-12 (no coincidence it is at same idx), chance peaks at 7, then decreases to max
+    tests[ASCII_2] = Test({ bet: ASCII_2, chance: 1, test: 2 });
+    tests[ASCII_3] = Test({ bet: ASCII_3, chance: 2, test: 3 });
+    tests[ASCII_4] = Test({ bet: ASCII_4, chance: 3, test: 4 });
+    tests[ASCII_5] = Test({ bet: ASCII_5, chance: 4, test: 5 });
+    tests[ASCII_6] = Test({ bet: ASCII_6, chance: 5, test: 6 });
+    tests[ASCII_7] = Test({ bet: ASCII_7, chance: 6, test: 7 });
+    tests[ASCII_8] = Test({ bet: ASCII_8, chance: 5, test: 8 });
+    tests[ASCII_9] = Test({ bet: ASCII_9, chance: 4, test: 9 });
+    tests[ASCII_0] = Test({ bet: ASCII_0, chance: 3, test: 10 });
+    tests[ASCII_1] = Test({ bet: ASCII_1, chance: 2, test: 11 });
+    tests[ASCII_X] = Test({ bet: ASCII_X, chance: 1, test: 12 });
+
+    // >7 & <7, both 15/36 chance
+    tests[ASCII_GT] = Test({ bet: ASCII_GT, chance: 15, test: 0 });
+    tests[ASCII_LT] = Test({ bet: ASCII_LT, chance: 15, test: 0 });
+
+    // two dice are equal or not equal
+    tests[ASCII_EQ] = Test({ bet: ASCII_EQ, chance: 6, test: 0 });
+    tests[ASCII_EX] = Test({ bet: ASCII_EX, chance: 30, test: 0 });
+
+    // single & double digits
+    tests[ASCII_D] = Test({ bet: ASCII_D, chance: 6, test: 0 });
+    tests[ASCII_S] = Test({ bet: ASCII_S, chance: 30, test: 0 });
+
+    // lowercase
+    tests[ASCII_LOWER + ASCII_D] = tests[ASCII_D];
+    tests[ASCII_LOWER + ASCII_E] = tests[ASCII_E];
+    tests[ASCII_LOWER + ASCII_O] = tests[ASCII_O];
+    tests[ASCII_LOWER + ASCII_S] = tests[ASCII_S];
+    tests[ASCII_LOWER + ASCII_X] = tests[ASCII_X];
+
+    // failsafe, nothing passed in as message data, then we do the default evens
+    tests[0] = tests[ASCII_E];
   }
 
   // allow the owner to withdraw his/her fees
@@ -137,48 +174,6 @@ contract LooneyDice {
     if (overflow > 0) {
       msg.sender.call.value(overflow)();
     }
-  }
-
-  // intialize the tests, done here so it is close to the actual test execution
-  function initTests() private {
-    // even & odd
-    tests[ASCII_E] = Test({ bet: ASCII_E, chance: 18, test: 0 });
-    tests[ASCII_O] = Test({ bet: ASCII_O, chance: 18, test: 1 });
-
-    // 2-12 (no coincidence it is at same idx), chance peaks at 7, then decreases to max
-    tests[ASCII_2] = Test({ bet: ASCII_2, chance: 1, test: 2 });
-    tests[ASCII_3] = Test({ bet: ASCII_3, chance: 2, test: 3 });
-    tests[ASCII_4] = Test({ bet: ASCII_4, chance: 3, test: 4 });
-    tests[ASCII_5] = Test({ bet: ASCII_5, chance: 4, test: 5 });
-    tests[ASCII_6] = Test({ bet: ASCII_6, chance: 5, test: 6 });
-    tests[ASCII_7] = Test({ bet: ASCII_7, chance: 6, test: 7 });
-    tests[ASCII_8] = Test({ bet: ASCII_8, chance: 5, test: 8 });
-    tests[ASCII_9] = Test({ bet: ASCII_9, chance: 4, test: 9 });
-    tests[ASCII_0] = Test({ bet: ASCII_0, chance: 3, test: 10 });
-    tests[ASCII_1] = Test({ bet: ASCII_1, chance: 2, test: 11 });
-    tests[ASCII_X] = Test({ bet: ASCII_X, chance: 1, test: 12 });
-
-    // >7 & <7, both 15/36 chance
-    tests[ASCII_GT] = Test({ bet: ASCII_GT, chance: 15, test: 0 });
-    tests[ASCII_LT] = Test({ bet: ASCII_LT, chance: 15, test: 0 });
-
-    // two dice are equal or not equal
-    tests[ASCII_EQ] = Test({ bet: ASCII_EQ, chance: 6, test: 0 });
-    tests[ASCII_EX] = Test({ bet: ASCII_EX, chance: 30, test: 0 });
-
-    // single & double digits
-    tests[ASCII_D] = Test({ bet: ASCII_D, chance: 6, test: 0 });
-    tests[ASCII_S] = Test({ bet: ASCII_S, chance: 30, test: 0 });
-
-    // lowercase
-    tests[ASCII_LOWER + ASCII_D] = tests[ASCII_D];
-    tests[ASCII_LOWER + ASCII_E] = tests[ASCII_E];
-    tests[ASCII_LOWER + ASCII_O] = tests[ASCII_O];
-    tests[ASCII_LOWER + ASCII_S] = tests[ASCII_S];
-    tests[ASCII_LOWER + ASCII_X] = tests[ASCII_X];
-
-    // failsafe, nothing passed in as message data, then we do the default evens
-    tests[0x00] = tests[ASCII_E];
   }
 
   // calculates the winner based on inputs & test
@@ -257,22 +252,17 @@ contract LooneyDice {
     MM funder = mms[mmidx];
 
     // NOTE: odds used as in divisor, i.e. evens = 36/18 = 200%, however input also gets added, so adjust
-    // output is 99% of the actual expected return (still lower than casinos)
+    // output is 99% of the actual expected return
     uint output = ((((input * MAX_ROLLS) / test.chance) - input) * CONFIG_RETURN_MUL) / CONFIG_RETURN_DIV;
-    uint overflow = 0;
 
-    // ummm, expected >available, just grab what we can from this market-maker
-    if (output >= funder.value) {
-      // calculate the new partial input value
-      uint partial = (input * funder.value) / output;
-
-      // ok, so now the output is only what the funder has in the pot
-      output = funder.value;
-
-      // set the overflows and new input
-      overflow = input - partial;
-      input = partial;
+    // see if we can afford to pay for this (if it wins, we only accept bets we can potentially cover)
+    if (output > funder.value) {
+      throw;
     }
+
+    // one more transaction & input climbing up
+    turnover += input;
+    txs += 1;
 
     // we will need to calculate the owner fees, either way
     uint fee = 0;
@@ -311,15 +301,11 @@ contract LooneyDice {
     // fees go to the owner
     fees += fee;
 
-    // one more transaction & input climbing up
-    turnover += input;
-    txs += 1;
-
     // notify the world of this outcome
     notifyPlayer(test, winner, input, result);
 
     // ok, this is now what we owe the player
-    return result + overflow;
+    return result;
   }
 
   // a simple sendTransaction with data (optional) is enought to drive the contract
