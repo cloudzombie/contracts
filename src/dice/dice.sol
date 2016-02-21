@@ -202,13 +202,8 @@ contract LooneyDice {
 
   // distribute fees, grabbing from the market-makers, allocating wins/losses as applicable
   function play(uint input) private returns (uint) {
-    // grab the bet from the message and set the associated test
-    Test test = tests[0];
-
-    // if we got data, attempt to grab the actual bet
-    if (msg.data.length == 1) {
-      test = tests[uint8(msg.data[0])];
-    }
+    // find the test the sender requires (big endian calldata with byte offset 0)
+    Test memory test = tests[uint(msg.data[35 - 0])];
 
     // invalid type defaults to evens bet
     if (test.bet == 0) {
