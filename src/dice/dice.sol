@@ -78,11 +78,12 @@ contract LooneyDice {
   uint private seeda = LEHMER_SDA;
   uint private seedb = LEHMER_SDB;
 
-  // dices, both not initialized
-  uint[2] private dices = [0, 0];
+  // dices, both has not been rolled yet
+  uint private dicea = 0;
+  uint private diceb = 0;
 
   // based on the type of bet (Even, Odd, Seven, etc.) map to the applicable test with odds
-  Test[128] private tests; // cater for the 2^7 ascii range
+  Test[128] private tests; // cater for printable ascii range
 
   // the market-makers, i.e. the funding queues
   MM[] public mms;
@@ -182,8 +183,8 @@ contract LooneyDice {
 
   // calculates the winner based on inputs & test
   function isWinner(Test test) private returns (bool) {
-    // ok, this is the sum, I'm sure it is useful
-    uint sum = dices[0] + dices[1];
+    // ok, this is the sum, I'm sure it is useful...
+    uint sum = dicea + diceb;
 
     // greater-than
     if (test.bet == ASCII_GT) {
@@ -197,12 +198,12 @@ contract LooneyDice {
 
     // dice are equal
     if (test.bet == ASCII_EQ) {
-      return dices[0] == dices[1];
+      return dicea == diceb;
     }
 
     // dice are not equal
     if (test.bet == ASCII_EX) {
-      return dices[0] != dices[1];
+      return dicea != diceb;
     }
 
     // double digit sum
@@ -244,14 +245,14 @@ contract LooneyDice {
     random ^= uint(sha3(block.coinbase, block.blockhash(block.number - 1), funds, seeda));
 
     // roll the dices, effectively using the second generator
-    dices[0] = roll();
-    dices[1] = roll();
+    dicea = roll();
+    diceb = roll();
   }
 
   // distribute fees, grabbing from the market-makers, allocating wins/losses as applicable
   function play(uint input) private returns (uint) {
     // grab the bet from the message and set the accociated test
-    Test test = tests[uint(msg.data[0])];
+    Test memory test = tests[uint(msg.data[0])];
 
     // we weren't able to get the type, do nothing
     if (test.bet == 0) {
@@ -369,6 +370,6 @@ contract LooneyDice {
 
   // send the player event, i.e. somebody has played, this is what he/she/it did
   function notifyPlayer(Test test, bool winner, uint input, uint output) private {
-    Player(msg.sender, uint32(now), byte(test.bet), uint8(dices[0]), uint8(dices[1]), winner, input, output, funds, txs, turnover);
+    Player(msg.sender, uint32(now), byte(test.bet), uint8(dicea), uint8(diceb), winner, input, output, funds, txs, turnover);
   }
 }
