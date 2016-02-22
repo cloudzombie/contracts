@@ -173,7 +173,7 @@ contract LooneyDice {
   }
 
   // distribute fees, grabbing from the market-makers, allocating wins/losses as applicable
-  function execute(uint play, uint input) private returns (uint) {
+  function execute(uint8 play, uint input) private returns (uint) {
     // setup the play/test we are executing
     Test memory test = tests[play];
 
@@ -245,7 +245,7 @@ contract LooneyDice {
     }
 
     // get the actual return value for the player
-    uint output = execute(uint(play), input) + (msg.value - input);
+    uint output = execute(uint8(play), input) + (msg.value - input);
 
     // do we need to send the player some ether, do it
     if (output > 0) {
