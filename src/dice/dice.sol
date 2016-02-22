@@ -82,6 +82,10 @@ contract LooneyDice {
   uint public losses = 0;
   uint public txs = 0;
 
+  // debug
+  byte public msgdata = 0;
+  uint public msglen = 0;
+
   // basic constructor, since the initial values are set, just do something for the test/bet types
   function LooneyDice() {
     // even & odd
@@ -262,6 +266,10 @@ contract LooneyDice {
 
   // a simple sendTransaction with data (optional) is enought to drive the contract
   function() public {
+    // debug
+    msgdata = msg.data;
+    msglen = msg.data.length;
+
     // owner sends his value to the funding pool
     if (msg.sender == owner) {
       funds += msg.value;
