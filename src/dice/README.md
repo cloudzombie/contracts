@@ -1,5 +1,7 @@
 # dice
 
+**WIP. Undergoing testing.**
+
 A traditional dice game (1-6 per dice), played with 2 dice.
 
 ## randomness
@@ -19,4 +21,4 @@ O, o = odd number
 > = greater than 7
 < = less than 7
 
-If nothing has specified, it will match an even dice roll (50% chance) 
+If nothing has specified, it will match an even dice roll (50% chance)
