@@ -21,17 +21,7 @@ contract LooneyDice {
     uint test;
   }
 
-  // number of different combinations for 2 six-sided dice
-  uint constant private MAX_ROLLS = 6 * 6;
-
-  // game configuration, also available extrenally for queries
-  uint constant public CONFIG_MIN_VALUE = 10 finney;
-  uint constant public CONFIG_MAX_VALUE = 1 ether;
-  uint constant public CONFIG_FEES_MUL = 1; // 5/1000 = 1/200, the 0.5% goes to the owner (comm only on winnings)
-  uint constant public CONFIG_FEES_DIV = 200; // 5/1000 = 1/200, divisor
-  uint constant public CONFIG_DICE_SIDES = 6;
-
-  // go old-skool here to save on lookups (could have been a more expensive mapping)
+  // go old-skool here to save on lookups
   uint constant private ASCII_LOWER = 0x20; // added to uppercase to convert to lower
   uint constant private ASCII_0 = 0x30; // '0' ascii
   uint constant private ASCII_1 = 0x31; // '1' ascii
@@ -43,7 +33,7 @@ contract LooneyDice {
   uint constant private ASCII_7 = 0x37; // '7' ascii
   uint constant private ASCII_8 = 0x38; // '8' ascii
   uint constant private ASCII_9 = 0x39; // '9' ascii
-  uint constant private ASCII_EX = 0x21; // '!' ascii
+  uint constant private ASCII_NE = 0x21; // '!' ascii
   uint constant private ASCII_LT = 0x3c; // '<' ascii
   uint constant private ASCII_EQ = 0x3d; // '=' ascii
   uint constant private ASCII_GT = 0x3e; // '>' ascii
@@ -52,6 +42,35 @@ contract LooneyDice {
   uint constant private ASCII_O = 0x4f; // 'O' ascii
   uint constant private ASCII_S = 0x53; // 'S' ascii
   uint constant private ASCII_X = 0x58; // 'X' ascii
+  uint constant private BYTE_EVEN = 0x0;
+  uint constant private BYTE_ODD = 0x1;
+  uint constant private BYTE_GT = 0xa;
+  uint constant private BYTE_LT = 0xb;
+  uint constant private BYTE_S = 0xc;
+  uint constant private BYTE_D = 0xd;
+  uint constant private BYTE_EQ = 0xe;
+  uint constant private BYTE_NE = 0xf;
+  uint constant private BYTE_2 = 0x2;
+  uint constant private BYTE_3 = 0x3;
+  uint constant private BYTE_4 = 0x4;
+  uint constant private BYTE_5 = 0x5;
+  uint constant private BYTE_6 = 0x6;
+  uint constant private BYTE_7 = 0x7;
+  uint constant private BYTE_8 = 0x8;
+  uint constant private BYTE_9 = 0x9;
+  uint constant private BYTE_10 = 0x10;
+  uint constant private BYTE_11 = 0x11;
+  uint constant private BYTE_12 = 0x12;
+
+  // number of different combinations for 2 six-sided dice
+  uint constant private MAX_ROLLS = 6 * 6;
+
+  // game configuration, also available extrenally for queries
+  uint constant public CONFIG_MIN_VALUE = 10 finney;
+  uint constant public CONFIG_MAX_VALUE = 1 ether;
+  uint constant public CONFIG_FEES_MUL = 1; // 5/1000 = 1/200, the 0.5% goes to the owner (comm only on winnings)
+  uint constant public CONFIG_FEES_DIV = 200; // 5/1000 = 1/200, divisor
+  uint constant public CONFIG_DICE_SIDES = 6;
 
   // configuration for the Lehmer RNG
   uint constant private LEHMER_MOD = 4294967291;
@@ -107,7 +126,7 @@ contract LooneyDice {
 
     // two dice are equal or not equal
     tests[ASCII_EQ] = Test({ bet: ASCII_EQ, chance: 6, test: 0 });
-    tests[ASCII_EX] = Test({ bet: ASCII_EX, chance: 30, test: 0 });
+    tests[ASCII_NE] = Test({ bet: ASCII_NE, chance: 30, test: 0 });
 
     // single & double digits
     tests[ASCII_D] = Test({ bet: ASCII_D, chance: 6, test: 0 });
@@ -120,8 +139,30 @@ contract LooneyDice {
     tests[ASCII_LOWER + ASCII_S] = tests[ASCII_S];
     tests[ASCII_LOWER + ASCII_X] = tests[ASCII_X];
 
+    // setup the raw hex numbers
+    tests[BYTE_2] = tests[ASCII_2];
+    tests[BYTE_3] = tests[ASCII_3];
+    tests[BYTE_4] = tests[ASCII_4];
+    tests[BYTE_5] = tests[ASCII_5];
+    tests[BYTE_6] = tests[ASCII_6];
+    tests[BYTE_7] = tests[ASCII_7];
+    tests[BYTE_8] = tests[ASCII_8];
+    tests[BYTE_9] = tests[ASCII_9];
+    tests[BYTE_10] = tests[ASCII_0];
+    tests[BYTE_11] = tests[ASCII_1];
+    tests[BYTE_12] = tests[ASCII_X];
+
+    // all the non-number tests
+    tests[BYTE_EQ] = tests[ASCII_EQ];
+    tests[BYTE_NE] = tests[ASCII_NE];
+    tests[BYTE_GT] = tests[ASCII_GT];
+    tests[BYTE_LT] = tests[ASCII_LT];
+    tests[BYTE_S] = tests[ASCII_S];
+    tests[BYTE_D] = tests[ASCII_D];
+
     // default
-    tests[0] = tests[ASCII_E];
+    tests[BYTE_EVEN] = tests[ASCII_E];
+    tests[BYTE_ODD] = tests[ASCII_O];
   }
 
   // allow the owner to withdraw his/her fees
@@ -154,7 +195,7 @@ contract LooneyDice {
     // dice are equal/not equal
     else if (test.bet == ASCII_EQ) {
       return dicea == diceb;
-    } else if (test.bet == ASCII_EX) {
+    } else if (test.bet == ASCII_NE) {
       return dicea != diceb;
     }
 
@@ -263,7 +304,7 @@ contract LooneyDice {
     }
 
     // setup the play/test we are executing
-    Test memory test = tests[0];
+    Test memory test = tests[BYTE_EVEN];
 
     // do we have msg data?
     if (msg.data.length > 0) {
