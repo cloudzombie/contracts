@@ -1,4 +1,4 @@
-// LooneyDice is a traditional dice-game (ala craps), allowing bets on the outcomes of a 2 dice throw
+// LooneyDice is a traditional dice-game (ala craps), allowing plays on the outcomes of a 2 dice throw
 //
 // git: https://github.com/thelooneyfarm/contracts/tree/master/src/dice
 // url: http://the.looney.farm/game/dice
@@ -14,13 +14,13 @@ contract LooneyDice {
     _
   }
 
-  // for each type of bet, chance = <odds>/36 occurences (return), test is the value to be tested
+  // for each play of play, chance = <odds>/36 occurences (return), test is the value to be tested
   struct Test {
     uint8 chance;
     uint8 test;
   }
 
-  // these are the values of the input types (byte in)
+  // these are the values of the input plays (byte in)
   uint8 constant private BYTE_EVEN_SUM = 0x0;
   uint8 constant private BYTE_ODD_SUM = 0x1;
   uint8 constant private BYTE_SUM_2 = 0x2;
@@ -71,7 +71,7 @@ contract LooneyDice {
   uint private dicea = 0;
   uint private diceb = 0;
 
-  // based on the type of bet (Even, Odd, Seven, etc.) map to the applicable test with odds
+  // based on the play of play (Even, Odd, Seven, etc.) map to the applicable test with odds
   Test[255] private tests;
 
   // publically available contract information
@@ -82,9 +82,9 @@ contract LooneyDice {
   uint public txs = 0;
 
   // debug
-  uint public debug_bet;
+  uint8 public debug_play;
 
-  // basic constructor, since the initial values are set, just do something for the test/bet types
+  // basic constructor, since the initial values are set, just do something for the test/play plays
   function LooneyDice() {
     // even & odd
     tests[BYTE_EVEN_SUM] = Test({ chance: 18, test: 0 });
@@ -126,7 +126,7 @@ contract LooneyDice {
   }
 
   // allow withdrawal of investment
-  function ownerWithdrawPool() owneronly public {
+  function ownerWithdrawBank() owneronly public {
     if (bank > 0 && funds > bank) {
       owner.call.value(bank)();
       bank = 0;
@@ -135,7 +135,7 @@ contract LooneyDice {
   }
 
   // calculates the winner based on inputs & test
-  function isWinner(uint8 bet, Test test) constant private returns (bool) {
+  function isWinner(uint play, Test test) constant private returns (bool) {
     // ok, this is the sum, quite useful for the next ones
     uint sum = dicea + diceb;
 
@@ -145,23 +145,23 @@ contract LooneyDice {
     }
 
     // dice are equal/not equal
-    else if (bet == BYTE_EQUAL) {
+    else if (play == BYTE_EQUAL) {
       return dicea == diceb;
-    } else if (bet == BYTE_NOT_EQUAL) {
+    } else if (play == BYTE_NOT_EQUAL) {
       return dicea != diceb;
     }
 
     // greater-than/less-than
-    else if (bet == BYTE_MORE_7) {
+    else if (play == BYTE_MORE_7) {
       return sum > 7;
-    } else if (bet == BYTE_LESS_7) {
+    } else if (play == BYTE_LESS_7) {
       return sum < 7;
     }
 
     // double/single digit sum
-    else if (bet == BYTE_DOUBLE) {
+    else if (play == BYTE_DOUBLE) {
       return sum >= 10;
-    } else if (bet == BYTE_SINGLE) {
+    } else if (play == BYTE_SINGLE) {
       return sum < 10;
     }
 
@@ -194,11 +194,11 @@ contract LooneyDice {
   }
 
   // distribute fees, grabbing from the market-makers, allocating wins/losses as applicable
-  function play(uint8 bet, uint input) private returns (uint) {
+  function execute(uint8 play, uint input) private returns (uint) {
     // setup the play/test we are executing
-    Test memory test = tests[bet];
+    Test memory test = tests[play];
 
-    // invalid bet type
+    // invalid play play
     if (test.chance == 0) {
       throw;
     }
@@ -210,7 +210,7 @@ contract LooneyDice {
     uint result = 0;
 
     // winning or losing outcome here?
-    if (isWinner(bet, test)) {
+    if (isWinner(play, test)) {
       // odds used as in divisor, i.e. evens = 36/18 = 200%, however input also gets added, so adjust
       uint output = ((input * MAX_ROLLS) / test.chance) - input;
 
@@ -219,10 +219,10 @@ contract LooneyDice {
         return input;
       }
 
-      // calculate the fees on the profit portion of the bet
+      // calculate the fees on the profit portion of the play
       uint fee = output / CONFIG_FEES_DIV;
 
-      // remove the mathed bets from total funds
+      // remove the mathed plays from total funds
       funds -= output;
       fees += fee;
 
@@ -244,14 +244,14 @@ contract LooneyDice {
     txs += 1;
 
     // notify the world of this outcome
-    notifyPlayer(bet, input, result);
+    notifyPlayer(play, input, result);
 
     // ok, this is now what we owe the player
     return result;
   }
 
   // the play interface, used in the cases where we want to send a different-than-equal play through
-  function enter(uint8 bet) public {
+  function enter(byte play) public {
     // we need to comply with the actual minimum values to be allowed to play
     if (msg.value < CONFIG_MIN_VALUE) {
       throw;
@@ -265,10 +265,10 @@ contract LooneyDice {
       input = CONFIG_MAX_VALUE;
     }
 
-    debug_bet = bet;
+    debug_play = uint8(play);
 
     // get the actual return value for the player
-    uint output = play(bet, input) + (msg.value - input);
+    uint output = execute(uint8(play), input) + (msg.value - input);
 
     // do we need to send the player some ether, do it
     if (output > 0) {
@@ -285,14 +285,14 @@ contract LooneyDice {
       return;
     }
 
-    enter(BYTE_EVEN_SUM);
+    enter(byte(BYTE_EVEN_SUM));
   }
 
   // log events
-  event Player(address addr, uint32 at, uint8 bet, uint8 dicea, uint8 diceb, uint input, uint output, uint wins, uint txs, uint turnover);
+  event Player(address addr, uint32 at, uint8 play, uint8 dicea, uint8 diceb, uint input, uint output, uint wins, uint txs, uint turnover);
 
   // send the player event, i.e. somebody has played, this is what he/she/it did
-  function notifyPlayer(uint8 bet, uint input, uint output) private {
-    Player(msg.sender, uint32(now), bet, uint8(dicea), uint8(diceb), input, output, wins, txs, turnover);
+  function notifyPlayer(uint8 play, uint input, uint output) private {
+    Player(msg.sender, uint32(now), play, uint8(dicea), uint8(diceb), input, output, wins, txs, turnover);
   }
 }
