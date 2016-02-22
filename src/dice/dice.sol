@@ -19,10 +19,12 @@ contract LooneyDice {
 
   // game configuration, also available extrenally for queries
   uint constant public CONFIG_MIN_VALUE = 10 finney;
-  uint constant public CONFIG_MAX_VALUE = 1 ether;
+  uint constant public CONFIG_MAX_VALUE = 999 finney;
   uint constant public CONFIG_FEES_MUL = 1; // 5/1000 = 1/200, the 0.5% goes to the owner (comm only on winnings)
   uint constant public CONFIG_FEES_DIV = 200; // 5/1000 = 1/200, divisor
   uint constant public CONFIG_DICE_SIDES = 6;
+  uint constant public CONFIG_MAX_EXPOSURE_MUL = 1; // 5/100 = 1/20, the 5% is the max drawdown we allow
+  uint constant public CONFIG_MAX_EXPOSURE_DIV = 20; // 5/100 = 1/20, divisor
 
   // configuration for the Lehmer RNG
   uint constant private LEHMER_MOD = 4294967291;
@@ -33,7 +35,6 @@ contract LooneyDice {
   // the owner address as well as the owner-applicable fees
   address private owner = msg.sender;
   uint private fees = 0;
-  uint private bank = msg.value;
 
   // initialize the pseudo RNG, ready to rock & roll
   uint private random = uint(sha3(block.coinbase, block.blockhash(block.number - 1), now));
@@ -140,7 +141,7 @@ contract LooneyDice {
       uint output = ((input * MAX_ROLLS) / chance) - input;
 
       // failsafe for the case where the contract runs out of funds
-      if (output > funds) {
+      if (output > (funds / CONFIG_MAX_EXPOSURE_DIV)) {
         throw;
       }
 
@@ -203,7 +204,6 @@ contract LooneyDice {
   function() public {
     // owner sends his value to the funding pool
     if (msg.sender == owner) {
-      bank += msg.value;
       funds += msg.value;
       return;
     }
@@ -221,12 +221,13 @@ contract LooneyDice {
   }
 
   // allow withdrawal of investment
-  function ownerWithdrawBank() owneronly public {
-    if (bank > 0 && funds > bank) {
-      owner.call.value(bank)();
-      bank = 0;
-      funds -= bank;
+  function ownerWithdrawBank(uint size) owneronly public {
+    if (size > funds) {
+      throw;
     }
+
+    owner.call.value(size)();
+    funds -= size;
   }
 
   // log events
