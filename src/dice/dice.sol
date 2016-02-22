@@ -125,30 +125,30 @@ contract LooneyDice {
     // fire up the random generator & roll the dice
     randomize();
 
-    // store if a winner and overall chance of this play
+    // store if a winner as well as the overall chance of this play
     bool winner = false;
     uint chance = 0;
 
-    // get the winning result
+    // get the winning result, enabling us to see where & what
     (chance, winner) = testWinner(play);
+
+    // odds used as in divisor, i.e. evens = 36/18 = 200%, however input also gets added, so adjust
+    uint output = ((input * MAX_ROLLS) / chance) - input;
+
+    // failsafe for the case where the contract could run dry
+    if (output > (funds / CONFIG_MAX_EXPOSURE_DIV)) {
+      throw;
+    }
 
     // the actual returns that we send back to the user
     uint result = 0;
 
     // winning or losing outcome here?
     if (winner) {
-      // odds used as in divisor, i.e. evens = 36/18 = 200%, however input also gets added, so adjust
-      uint output = ((input * MAX_ROLLS) / chance) - input;
-
-      // failsafe for the case where the contract runs out of funds
-      if (output > (funds / CONFIG_MAX_EXPOSURE_DIV)) {
-        throw;
-      }
-
       // calculate the fees on the profit portion of the play
       uint fee = output / CONFIG_FEES_DIV;
 
-      // remove the mathed plays from total funds
+      // remove the matched plays from total funds
       funds -= output;
       fees += fee;
 
@@ -178,21 +178,13 @@ contract LooneyDice {
 
   // the play interface, used in the cases where we want to send a different-than-equal play through
   function enter(uint8 play) public {
-    // we need to comply with the actual minimum values to be allowed to play
-    if (msg.value < CONFIG_MIN_VALUE) {
+    // we need to comply with the actual minimum/maximum values to be allowed to play
+    if (msg.value < CONFIG_MIN_VALUE || msg.value > CONFIG_MAX_VALUE) {
       throw;
     }
 
-    // keep track of the input value as sent by the user
-    uint input = msg.value;
-
-    // erm, more than we allow, set to the cap (extras to be returned)
-    if (input > CONFIG_MAX_VALUE) {
-      input = CONFIG_MAX_VALUE;
-    }
-
     // get the actual return value for the player
-    uint output = execute(play, input) + (msg.value - input);
+    uint output = execute(play, msg.value);
 
     // do we need to send the player some ether, do it
     if (output > 0) {
