@@ -141,7 +141,7 @@ contract LooneyDice {
 
       // failsafe for the case where the contract runs out of funds
       if (output > funds) {
-        return input;
+        throw;
       }
 
       // calculate the fees on the profit portion of the play
