@@ -21,25 +21,25 @@ contract LooneyDice {
   }
 
   // these are the values of the input plays (byte in)
-  uint8 constant private BYTE_EVEN_SUM = 0x0;
-  uint8 constant private BYTE_ODD_SUM = 0x1;
-  uint8 constant private BYTE_SUM_2 = 0x2;
-  uint8 constant private BYTE_SUM_3 = 0x3;
-  uint8 constant private BYTE_SUM_4 = 0x4;
-  uint8 constant private BYTE_SUM_5 = 0x5;
-  uint8 constant private BYTE_SUM_6 = 0x6;
-  uint8 constant private BYTE_SUM_7 = 0x7;
-  uint8 constant private BYTE_SUM_8 = 0x8;
-  uint8 constant private BYTE_SUM_9 = 0x9;
-  uint8 constant private BYTE_SUM_10 = 0x10;
-  uint8 constant private BYTE_SUM_11 = 0x11;
-  uint8 constant private BYTE_SUM_12 = 0x12;
-  uint8 constant private BYTE_MORE_7 = 0xa;
-  uint8 constant private BYTE_LESS_7 = 0xb;
-  uint8 constant private BYTE_SINGLE = 0xc;
-  uint8 constant private BYTE_DOUBLE = 0xd;
-  uint8 constant private BYTE_EQUAL = 0xe;
-  uint8 constant private BYTE_NOT_EQUAL = 0xf;
+  uint constant private PLAY_EVEN_SUM = 0x0;
+  uint constant private PLAY_ODD_SUM = 0x1;
+  uint constant private PLAY_SUM_2 = 0x2;
+  uint constant private PLAY_SUM_3 = 0x3;
+  uint constant private PLAY_SUM_4 = 0x4;
+  uint constant private PLAY_SUM_5 = 0x5;
+  uint constant private PLAY_SUM_6 = 0x6;
+  uint constant private PLAY_SUM_7 = 0x7;
+  uint constant private PLAY_SUM_8 = 0x8;
+  uint constant private PLAY_SUM_9 = 0x9;
+  uint constant private PLAY_SUM_10 = 0x10;
+  uint constant private PLAY_SUM_11 = 0x11;
+  uint constant private PLAY_SUM_12 = 0x12;
+  uint constant private PLAY_MORE_7 = 0xa;
+  uint constant private PLAY_LESS_7 = 0xb;
+  uint constant private PLAY_SINGLE = 0xc;
+  uint constant private PLAY_DOUBLE = 0xd;
+  uint constant private PLAY_EQUAL = 0xe;
+  uint constant private PLAY_NOT_EQUAL = 0xf;
 
   // number of different combinations for 2 six-sided dice
   uint constant private MAX_ROLLS = 6 * 6;
@@ -81,57 +81,36 @@ contract LooneyDice {
   uint public losses = 0;
   uint public txs = 0;
 
-  // debug
-  uint8 public debug_play;
-
   // basic constructor, since the initial values are set, just do something for the test/play plays
   function LooneyDice() {
     // even & odd
-    tests[BYTE_EVEN_SUM] = Test({ chance: 18, test: 0 });
-    tests[BYTE_ODD_SUM] = Test({ chance: 18, test: 1 });
+    tests[PLAY_EVEN_SUM] = Test({ chance: 18, test: 0 });
+    tests[PLAY_ODD_SUM] = Test({ chance: 18, test: 1 });
 
     // sums 2-12, chance peaks at 7, then decreases to max
-    tests[BYTE_SUM_2] = Test({ chance: 1, test: 2 });
-    tests[BYTE_SUM_3] = Test({ chance: 2, test: 3 });
-    tests[BYTE_SUM_4] = Test({ chance: 3, test: 4 });
-    tests[BYTE_SUM_5] = Test({ chance: 4, test: 5 });
-    tests[BYTE_SUM_6] = Test({ chance: 5, test: 6 });
-    tests[BYTE_SUM_7] = Test({ chance: 6, test: 7 });
-    tests[BYTE_SUM_8] = Test({ chance: 5, test: 8 });
-    tests[BYTE_SUM_9] = Test({ chance: 4, test: 9 });
-    tests[BYTE_SUM_10] = Test({ chance: 3, test: 10 });
-    tests[BYTE_SUM_11] = Test({ chance: 2, test: 11 });
-    tests[BYTE_SUM_12] = Test({ chance: 1, test: 12 });
+    tests[PLAY_SUM_2] = Test({ chance: 1, test: 2 });
+    tests[PLAY_SUM_3] = Test({ chance: 2, test: 3 });
+    tests[PLAY_SUM_4] = Test({ chance: 3, test: 4 });
+    tests[PLAY_SUM_5] = Test({ chance: 4, test: 5 });
+    tests[PLAY_SUM_6] = Test({ chance: 5, test: 6 });
+    tests[PLAY_SUM_7] = Test({ chance: 6, test: 7 });
+    tests[PLAY_SUM_8] = Test({ chance: 5, test: 8 });
+    tests[PLAY_SUM_9] = Test({ chance: 4, test: 9 });
+    tests[PLAY_SUM_10] = Test({ chance: 3, test: 10 });
+    tests[PLAY_SUM_11] = Test({ chance: 2, test: 11 });
+    tests[PLAY_SUM_12] = Test({ chance: 1, test: 12 });
 
     // >7 & <7, both 15/36 chance
-    tests[BYTE_MORE_7] = Test({ chance: 15, test: 0 });
-    tests[BYTE_LESS_7] = Test({ chance: 15, test: 0 });
+    tests[PLAY_MORE_7] = Test({ chance: 15, test: 0 });
+    tests[PLAY_LESS_7] = Test({ chance: 15, test: 0 });
 
     // two dice are equal or not equal
-    tests[BYTE_EQUAL] = Test({ chance: 6, test: 0 });
-    tests[BYTE_NOT_EQUAL] = Test({ chance: 30, test: 0 });
+    tests[PLAY_EQUAL] = Test({ chance: 6, test: 0 });
+    tests[PLAY_NOT_EQUAL] = Test({ chance: 30, test: 0 });
 
     // single & double digits
-    tests[BYTE_DOUBLE] = Test({ chance: 6, test: 0 });
-    tests[BYTE_SINGLE] = Test({ chance: 30, test: 0 });
-  }
-
-  // allow the owner to withdraw his/her fees
-  function ownerWithdraw() owneronly public {
-    // send any fees we have and result the value back
-    if (fees > 0) {
-      owner.call.value(fees)();
-      fees = 0;
-    }
-  }
-
-  // allow withdrawal of investment
-  function ownerWithdrawBank() owneronly public {
-    if (bank > 0 && funds > bank) {
-      owner.call.value(bank)();
-      bank = 0;
-      funds -= bank;
-    }
+    tests[PLAY_DOUBLE] = Test({ chance: 6, test: 0 });
+    tests[PLAY_SINGLE] = Test({ chance: 30, test: 0 });
   }
 
   // calculates the winner based on inputs & test
@@ -145,23 +124,23 @@ contract LooneyDice {
     }
 
     // dice are equal/not equal
-    else if (play == BYTE_EQUAL) {
+    else if (play == PLAY_EQUAL) {
       return dicea == diceb;
-    } else if (play == BYTE_NOT_EQUAL) {
+    } else if (play == PLAY_NOT_EQUAL) {
       return dicea != diceb;
     }
 
     // greater-than/less-than
-    else if (play == BYTE_MORE_7) {
+    else if (play == PLAY_MORE_7) {
       return sum > 7;
-    } else if (play == BYTE_LESS_7) {
+    } else if (play == PLAY_LESS_7) {
       return sum < 7;
     }
 
     // double/single digit sum
-    else if (play == BYTE_DOUBLE) {
+    else if (play == PLAY_DOUBLE) {
       return sum >= 10;
-    } else if (play == BYTE_SINGLE) {
+    } else if (play == PLAY_SINGLE) {
       return sum < 10;
     }
 
@@ -194,11 +173,11 @@ contract LooneyDice {
   }
 
   // distribute fees, grabbing from the market-makers, allocating wins/losses as applicable
-  function execute(uint8 play, uint input) private returns (uint) {
+  function execute(uint play, uint input) private returns (uint) {
     // setup the play/test we are executing
     Test memory test = tests[play];
 
-    // invalid play play
+    // invalid play, don't execute
     if (test.chance == 0) {
       throw;
     }
@@ -265,10 +244,8 @@ contract LooneyDice {
       input = CONFIG_MAX_VALUE;
     }
 
-    debug_play = uint8(play);
-
     // get the actual return value for the player
-    uint output = execute(uint8(play), input) + (msg.value - input);
+    uint output = execute(uint(play), input) + (msg.value - input);
 
     // do we need to send the player some ether, do it
     if (output > 0) {
@@ -285,14 +262,32 @@ contract LooneyDice {
       return;
     }
 
-    enter(byte(BYTE_EVEN_SUM));
+    enter(byte(PLAY_EVEN_SUM));
+  }
+
+  // allow the owner to withdraw his/her fees
+  function ownerWithdrawFees() owneronly public {
+    // send any fees we have and result the value back
+    if (fees > 0) {
+      owner.call.value(fees)();
+      fees = 0;
+    }
+  }
+
+  // allow withdrawal of investment
+  function ownerWithdrawBank() owneronly public {
+    if (bank > 0 && funds > bank) {
+      owner.call.value(bank)();
+      bank = 0;
+      funds -= bank;
+    }
   }
 
   // log events
   event Player(address addr, uint32 at, uint8 play, uint8 dicea, uint8 diceb, uint input, uint output, uint wins, uint txs, uint turnover);
 
   // send the player event, i.e. somebody has played, this is what he/she/it did
-  function notifyPlayer(uint8 play, uint input, uint output) private {
-    Player(msg.sender, uint32(now), play, uint8(dicea), uint8(diceb), input, output, wins, txs, turnover);
+  function notifyPlayer(uint play, uint input, uint output) private {
+    Player(msg.sender, uint32(now), uint8(play), uint8(dicea), uint8(diceb), input, output, wins, txs, turnover);
   }
 }
