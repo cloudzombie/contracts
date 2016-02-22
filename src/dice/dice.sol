@@ -16,51 +16,30 @@ contract LooneyDice {
 
   // for each type of bet, chance = <odds>/36 occurences (return), test is the value to be tested
   struct Test {
-    uint bet;
-    uint chance;
-    uint test;
+    uint8 chance;
+    uint8 test;
   }
 
-  // go old-skool here to save on lookups
-  uint constant private ASCII_LOWER = 0x20; // added to uppercase to convert to lower
-  uint constant private ASCII_0 = 0x30; // '0' ascii
-  uint constant private ASCII_1 = 0x31; // '1' ascii
-  uint constant private ASCII_2 = 0x32; // '2' ascii
-  uint constant private ASCII_3 = 0x33; // '3' ascii
-  uint constant private ASCII_4 = 0x34; // '4' ascii
-  uint constant private ASCII_5 = 0x35; // '5' ascii
-  uint constant private ASCII_6 = 0x36; // '6' ascii
-  uint constant private ASCII_7 = 0x37; // '7' ascii
-  uint constant private ASCII_8 = 0x38; // '8' ascii
-  uint constant private ASCII_9 = 0x39; // '9' ascii
-  uint constant private ASCII_NE = 0x21; // '!' ascii
-  uint constant private ASCII_LT = 0x3c; // '<' ascii
-  uint constant private ASCII_EQ = 0x3d; // '=' ascii
-  uint constant private ASCII_GT = 0x3e; // '>' ascii
-  uint constant private ASCII_D = 0x44; // 'D' ascii
-  uint constant private ASCII_E = 0x45; // 'E' ascii
-  uint constant private ASCII_O = 0x4f; // 'O' ascii
-  uint constant private ASCII_S = 0x53; // 'S' ascii
-  uint constant private ASCII_X = 0x58; // 'X' ascii
-  uint constant private BYTE_EVEN = 0x0;
-  uint constant private BYTE_ODD = 0x1;
-  uint constant private BYTE_GT = 0xa;
-  uint constant private BYTE_LT = 0xb;
-  uint constant private BYTE_S = 0xc;
-  uint constant private BYTE_D = 0xd;
-  uint constant private BYTE_EQ = 0xe;
-  uint constant private BYTE_NE = 0xf;
-  uint constant private BYTE_2 = 0x2;
-  uint constant private BYTE_3 = 0x3;
-  uint constant private BYTE_4 = 0x4;
-  uint constant private BYTE_5 = 0x5;
-  uint constant private BYTE_6 = 0x6;
-  uint constant private BYTE_7 = 0x7;
-  uint constant private BYTE_8 = 0x8;
-  uint constant private BYTE_9 = 0x9;
-  uint constant private BYTE_10 = 0x10;
-  uint constant private BYTE_11 = 0x11;
-  uint constant private BYTE_12 = 0x12;
+  // these are the values of the input types (byte in)
+  uint8 constant private BYTE_EVEN_SUM = 0x0;
+  uint8 constant private BYTE_ODD_SUM = 0x1;
+  uint8 constant private BYTE_SUM_2 = 0x2;
+  uint8 constant private BYTE_SUM_3 = 0x3;
+  uint8 constant private BYTE_SUM_4 = 0x4;
+  uint8 constant private BYTE_SUM_5 = 0x5;
+  uint8 constant private BYTE_SUM_6 = 0x6;
+  uint8 constant private BYTE_SUM_7 = 0x7;
+  uint8 constant private BYTE_SUM_8 = 0x8;
+  uint8 constant private BYTE_SUM_9 = 0x9;
+  uint8 constant private BYTE_SUM_10 = 0x10;
+  uint8 constant private BYTE_SUM_11 = 0x11;
+  uint8 constant private BYTE_SUM_12 = 0x12;
+  uint8 constant private BYTE_MORE_7 = 0xa;
+  uint8 constant private BYTE_LESS_7 = 0xb;
+  uint8 constant private BYTE_SINGLE = 0xc;
+  uint8 constant private BYTE_DOUBLE = 0xd;
+  uint8 constant private BYTE_EQUAL = 0xe;
+  uint8 constant private BYTE_NOT_EQUAL = 0xf;
 
   // number of different combinations for 2 six-sided dice
   uint constant private MAX_ROLLS = 6 * 6;
@@ -81,6 +60,7 @@ contract LooneyDice {
   // the owner address as well as the owner-applicable fees
   address private owner = msg.sender;
   uint private fees = 0;
+  uint private bank = msg.value;
 
   // initialize the pseudo RNG, ready to rock & roll
   uint private random = uint(sha3(block.coinbase, block.blockhash(block.number - 1), now));
@@ -95,79 +75,45 @@ contract LooneyDice {
   Test[255] private tests;
 
   // publically available contract information
-  uint public funds = 0;
+  uint public funds = msg.value;
   uint public turnover = 0;
   uint public wins = 0;
   uint public losses = 0;
   uint public txs = 0;
 
   // debug
-  bytes public debug_msgdata;
-  uint public debug_msglen;
   uint public debug_bet;
 
   // basic constructor, since the initial values are set, just do something for the test/bet types
   function LooneyDice() {
     // even & odd
-    tests[ASCII_E] = Test({ bet: ASCII_E, chance: 18, test: 0 });
-    tests[ASCII_O] = Test({ bet: ASCII_O, chance: 18, test: 1 });
+    tests[BYTE_EVEN_SUM] = Test({ chance: 18, test: 0 });
+    tests[BYTE_ODD_SUM] = Test({ chance: 18, test: 1 });
 
-    // 2-12 (no coincidence it is at same idx), chance peaks at 7, then decreases to max
-    tests[ASCII_2] = Test({ bet: ASCII_2, chance: 1, test: 2 });
-    tests[ASCII_3] = Test({ bet: ASCII_3, chance: 2, test: 3 });
-    tests[ASCII_4] = Test({ bet: ASCII_4, chance: 3, test: 4 });
-    tests[ASCII_5] = Test({ bet: ASCII_5, chance: 4, test: 5 });
-    tests[ASCII_6] = Test({ bet: ASCII_6, chance: 5, test: 6 });
-    tests[ASCII_7] = Test({ bet: ASCII_7, chance: 6, test: 7 });
-    tests[ASCII_8] = Test({ bet: ASCII_8, chance: 5, test: 8 });
-    tests[ASCII_9] = Test({ bet: ASCII_9, chance: 4, test: 9 });
-    tests[ASCII_0] = Test({ bet: ASCII_0, chance: 3, test: 10 });
-    tests[ASCII_1] = Test({ bet: ASCII_1, chance: 2, test: 11 });
-    tests[ASCII_X] = Test({ bet: ASCII_X, chance: 1, test: 12 });
+    // sums 2-12, chance peaks at 7, then decreases to max
+    tests[BYTE_SUM_2] = Test({ chance: 1, test: 2 });
+    tests[BYTE_SUM_3] = Test({ chance: 2, test: 3 });
+    tests[BYTE_SUM_4] = Test({ chance: 3, test: 4 });
+    tests[BYTE_SUM_5] = Test({ chance: 4, test: 5 });
+    tests[BYTE_SUM_6] = Test({ chance: 5, test: 6 });
+    tests[BYTE_SUM_7] = Test({ chance: 6, test: 7 });
+    tests[BYTE_SUM_8] = Test({ chance: 5, test: 8 });
+    tests[BYTE_SUM_9] = Test({ chance: 4, test: 9 });
+    tests[BYTE_SUM_10] = Test({ chance: 3, test: 10 });
+    tests[BYTE_SUM_11] = Test({ chance: 2, test: 11 });
+    tests[BYTE_SUM_12] = Test({ chance: 1, test: 12 });
 
     // >7 & <7, both 15/36 chance
-    tests[ASCII_GT] = Test({ bet: ASCII_GT, chance: 15, test: 0 });
-    tests[ASCII_LT] = Test({ bet: ASCII_LT, chance: 15, test: 0 });
+    tests[BYTE_MORE_7] = Test({ chance: 15, test: 0 });
+    tests[BYTE_LESS_7] = Test({ chance: 15, test: 0 });
 
     // two dice are equal or not equal
-    tests[ASCII_EQ] = Test({ bet: ASCII_EQ, chance: 6, test: 0 });
-    tests[ASCII_NE] = Test({ bet: ASCII_NE, chance: 30, test: 0 });
+    tests[BYTE_EQUAL] = Test({ chance: 6, test: 0 });
+    tests[BYTE_NOT_EQUAL] = Test({ chance: 30, test: 0 });
 
     // single & double digits
-    tests[ASCII_D] = Test({ bet: ASCII_D, chance: 6, test: 0 });
-    tests[ASCII_S] = Test({ bet: ASCII_S, chance: 30, test: 0 });
-
-    // lowercase
-    tests[ASCII_LOWER + ASCII_D] = tests[ASCII_D];
-    tests[ASCII_LOWER + ASCII_E] = tests[ASCII_E];
-    tests[ASCII_LOWER + ASCII_O] = tests[ASCII_O];
-    tests[ASCII_LOWER + ASCII_S] = tests[ASCII_S];
-    tests[ASCII_LOWER + ASCII_X] = tests[ASCII_X];
-
-    // setup the raw hex numbers
-    tests[BYTE_2] = tests[ASCII_2];
-    tests[BYTE_3] = tests[ASCII_3];
-    tests[BYTE_4] = tests[ASCII_4];
-    tests[BYTE_5] = tests[ASCII_5];
-    tests[BYTE_6] = tests[ASCII_6];
-    tests[BYTE_7] = tests[ASCII_7];
-    tests[BYTE_8] = tests[ASCII_8];
-    tests[BYTE_9] = tests[ASCII_9];
-    tests[BYTE_10] = tests[ASCII_0];
-    tests[BYTE_11] = tests[ASCII_1];
-    tests[BYTE_12] = tests[ASCII_X];
-
-    // all the non-number tests
-    tests[BYTE_EQ] = tests[ASCII_EQ];
-    tests[BYTE_NE] = tests[ASCII_NE];
-    tests[BYTE_GT] = tests[ASCII_GT];
-    tests[BYTE_LT] = tests[ASCII_LT];
-    tests[BYTE_S] = tests[ASCII_S];
-    tests[BYTE_D] = tests[ASCII_D];
-
-    // default
-    tests[BYTE_EVEN] = tests[ASCII_E];
-    tests[BYTE_ODD] = tests[ASCII_O];
+    tests[BYTE_DOUBLE] = Test({ chance: 6, test: 0 });
+    tests[BYTE_SINGLE] = Test({ chance: 30, test: 0 });
   }
 
   // allow the owner to withdraw his/her fees
@@ -181,14 +127,15 @@ contract LooneyDice {
 
   // allow withdrawal of investment
   function ownerWithdrawPool() owneronly public {
-    if (funds > 0) {
-      owner.call.value(funds)();
-      funds = 0;
+    if (bank > 0 && funds > bank) {
+      owner.call.value(bank)();
+      bank = 0;
+      funds -= bank;
     }
   }
 
   // calculates the winner based on inputs & test
-  function isWinner(Test test) constant private returns (bool) {
+  function isWinner(uint8 bet, Test test) constant private returns (bool) {
     // ok, this is the sum, quite useful for the next ones
     uint sum = dicea + diceb;
 
@@ -198,23 +145,23 @@ contract LooneyDice {
     }
 
     // dice are equal/not equal
-    else if (test.bet == ASCII_EQ) {
+    else if (bet == BYTE_EQUAL) {
       return dicea == diceb;
-    } else if (test.bet == ASCII_NE) {
+    } else if (bet == BYTE_NOT_EQUAL) {
       return dicea != diceb;
     }
 
     // greater-than/less-than
-    else if (test.bet == ASCII_GT) {
+    else if (bet == BYTE_MORE_7) {
       return sum > 7;
-    } else if (test.bet == ASCII_LT) {
+    } else if (bet == BYTE_LESS_7) {
       return sum < 7;
     }
 
     // double/single digit sum
-    else if (test.bet == ASCII_D) {
+    else if (bet == BYTE_DOUBLE) {
       return sum >= 10;
-    } else if (test.bet == ASCII_S) {
+    } else if (bet == BYTE_SINGLE) {
       return sum < 10;
     }
 
@@ -247,7 +194,15 @@ contract LooneyDice {
   }
 
   // distribute fees, grabbing from the market-makers, allocating wins/losses as applicable
-  function play(Test test, uint input) private returns (uint) {
+  function play(uint8 bet, uint input) private returns (uint) {
+    // setup the play/test we are executing
+    Test memory test = tests[bet];
+
+    // invalid bet type
+    if (test.chance == 0) {
+      throw;
+    }
+
     // fire up the random generator & roll the dice
     randomize();
 
@@ -255,7 +210,7 @@ contract LooneyDice {
     uint result = 0;
 
     // winning or losing outcome here?
-    if (isWinner(test)) {
+    if (isWinner(bet, test)) {
       // odds used as in divisor, i.e. evens = 36/18 = 200%, however input also gets added, so adjust
       uint output = ((input * MAX_ROLLS) / test.chance) - input;
 
@@ -289,42 +244,17 @@ contract LooneyDice {
     txs += 1;
 
     // notify the world of this outcome
-    notifyPlayer(test.bet, input, result);
+    notifyPlayer(bet, input, result);
 
     // ok, this is now what we owe the player
     return result;
   }
 
-  // a simple sendTransaction with data (optional) is enought to drive the contract
-  function() public {
-    // owner sends his value to the funding pool
-    if (msg.sender == owner) {
-      funds += msg.value;
-      return;
-    }
-
+  // the play interface, used in the cases where we want to send a different-than-equal play through
+  function enter(uint8 bet) public {
     // we need to comply with the actual minimum values to be allowed to play
     if (msg.value < CONFIG_MIN_VALUE) {
       throw;
-    }
-
-    // setup the play/test we are executing
-    Test memory test = tests[BYTE_EVEN];
-
-    debug_msgdata = msg.data;
-    debug_msglen = msg.data.length;
-
-    // do we have msg data?
-    if (msg.data.length > 0) {
-      debug_bet = uint(msg.data[0]);
-
-      // the first byte represents what we are planning to do
-      test = tests[uint(msg.data[0])];
-
-      // invalid bet type
-      if (test.bet == 0) {
-        throw;
-      }
     }
 
     // keep track of the input value as sent by the user
@@ -335,8 +265,10 @@ contract LooneyDice {
       input = CONFIG_MAX_VALUE;
     }
 
+    debug_bet = bet;
+
     // get the actual return value for the player
-    uint output = play(test, input) + (msg.value - input);
+    uint output = play(bet, input) + (msg.value - input);
 
     // do we need to send the player some ether, do it
     if (output > 0) {
@@ -344,11 +276,23 @@ contract LooneyDice {
     }
   }
 
+  // a simple sendTransaction with data (optional) is enough to drive the contract
+  function() public {
+    // owner sends his value to the funding pool
+    if (msg.sender == owner) {
+      bank += msg.value;
+      funds += msg.value;
+      return;
+    }
+
+    enter(BYTE_EVEN_SUM);
+  }
+
   // log events
   event Player(address addr, uint32 at, uint8 bet, uint8 dicea, uint8 diceb, uint input, uint output, uint wins, uint txs, uint turnover);
 
   // send the player event, i.e. somebody has played, this is what he/she/it did
-  function notifyPlayer(uint bet, uint input, uint output) private {
-    Player(msg.sender, uint32(now), uint8(bet), uint8(dicea), uint8(diceb), input, output, wins, txs, turnover);
+  function notifyPlayer(uint8 bet, uint input, uint output) private {
+    Player(msg.sender, uint32(now), bet, uint8(dicea), uint8(diceb), input, output, wins, txs, turnover);
   }
 }
