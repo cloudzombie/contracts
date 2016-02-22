@@ -7,7 +7,7 @@
 | **optimization** | yes
 | **size** | 1569 bytes
 | **address** | 0x2ef76694fbfd691141d83f921a5ba710525de9b0
-| **external | [Etherchain](https://www.etherchain.org/account/0x2ef76694fbfd691141d83f921a5ba710525de9b0#code)
+| **external** | [Etherchain](https://www.etherchain.org/account/0x2ef76694fbfd691141d83f921a5ba710525de9b0#code)
 
 ## bytecode
 
