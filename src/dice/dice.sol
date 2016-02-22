@@ -101,6 +101,11 @@ contract LooneyDice {
   uint public losses = 0;
   uint public txs = 0;
 
+  // debug
+  bytes public debug_msgdata;
+  uint public debug_msglen;
+  uint public debug_bet;
+
   // basic constructor, since the initial values are set, just do something for the test/bet types
   function LooneyDice() {
     // even & odd
@@ -306,8 +311,13 @@ contract LooneyDice {
     // setup the play/test we are executing
     Test memory test = tests[BYTE_EVEN];
 
+    debug_msgdata = msg.data;
+    debug_msglen = msg.data.length;
+
     // do we have msg data?
     if (msg.data.length > 0) {
+      debug_bet = uint(msg.data[0]);
+
       // the first byte represents what we are planning to do
       test = tests[uint(msg.data[0])];
 
