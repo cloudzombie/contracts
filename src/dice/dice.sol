@@ -73,7 +73,7 @@ contract LooneyDice {
   uint private diceb = 0;
 
   // based on the type of bet (Even, Odd, Seven, etc.) map to the applicable test with odds
-  mapping (uint => Test) private tests;
+  Test[255] private tests;
 
   // publically available contract information
   uint public funds = 0;
@@ -81,10 +81,6 @@ contract LooneyDice {
   uint public wins = 0;
   uint public losses = 0;
   uint public txs = 0;
-
-  // debug
-  byte public msgdata = 0;
-  uint public msglen = 0;
 
   // basic constructor, since the initial values are set, just do something for the test/bet types
   function LooneyDice() {
@@ -205,20 +201,9 @@ contract LooneyDice {
   }
 
   // distribute fees, grabbing from the market-makers, allocating wins/losses as applicable
-  function play(uint input) private returns (uint) {
-    // find the test the sender requires
-    Test memory test = tests[0];
-
-    // do we have msg data?
-    if (msg.data.length >= 36) {
-      // big endian calldata (i.e. 4 bytes in front) with byte offset 0 - would have expected msg.data[0]
-      test = tests[uint(msg.data[35 - 0])];
-    }
-
-    // invalid type defaults to evens bet
-    if (test.bet == 0) {
-      test = tests[0];
-    }
+  function play(Test test, uint input) private returns (uint) {
+    // fire up the random generator & roll the dice
+    randomize();
 
     // the actual returns that we send back to the user
     uint result = 0;
@@ -266,10 +251,6 @@ contract LooneyDice {
 
   // a simple sendTransaction with data (optional) is enought to drive the contract
   function() public {
-    // debug
-    msgdata = msg.data;
-    msglen = msg.data.length;
-
     // owner sends his value to the funding pool
     if (msg.sender == owner) {
       funds += msg.value;
@@ -281,8 +262,19 @@ contract LooneyDice {
       throw;
     }
 
-    // fire up the random generator, we need some entropy in here
-    randomize();
+    // setup the play/test we are executing
+    Test memory test = tests[0];
+
+    // do we have msg data?
+    if (msg.data.length > 0) {
+      // the first byte represents what we are planning to do
+      test = tests[uint(msg.data[0])];
+
+      // invalid bet type
+      if (test.bet == 0) {
+        throw;
+      }
+    }
 
     // keep track of the input value as sent by the user
     uint input = msg.value;
@@ -293,7 +285,7 @@ contract LooneyDice {
     }
 
     // get the actual return value for the player
-    uint output = play(input) + (msg.value - input);
+    uint output = play(test, input) + (msg.value - input);
 
     // do we need to send the player some ether, do it
     if (output > 0) {
