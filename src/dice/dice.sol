@@ -162,7 +162,7 @@ contract LooneyDice {
       funds += input;
 
       // one more loss for the record books
-      losses++;
+      losses += 1;
     }
 
     // one more transaction & input climbing up
