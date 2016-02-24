@@ -1,7 +1,5 @@
 # dice
 
-**WIP. Undergoing testing.**
-
 A traditional dice game (1-6 per dice), played with 2 dice.
 
 ## randomness
@@ -10,7 +8,7 @@ The approach is adapted from what is employed in the [lottery](../lottery/README
 
 ## matching
 
-Sending a transaction with a value calls `enter(0)`, playing evens. Calling the `enter(play)` function on the contract, allows for the following:
+Sending a transaction with a value calls `enter(0)`, playing evens. Calling the `enter(sumOrRange)` function on the contract, allows for the following:
 
 0, 1 = even sum & odd sum
 2,3,4,5,6,7,8,9,10,11,12 = matches the exact number sum
@@ -22,4 +20,4 @@ For range combinations, specify the large number first
 104 = between 10 and 4
 etc.
 
-For ranges, large number is specified first and the numbers need to not be equal, i.e. 44 is not allowed (would be same as playing 4)
+For ranges, large number is specified first, evaluating a range inclusiv of the min and max
