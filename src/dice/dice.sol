@@ -156,6 +156,9 @@ contract LooneyDice {
       // we have one more win for the contract
       wins += 1;
     } else {
+      // player lost this one, return nothing
+      output = 0;
+
       // one more loss for the record books
       losses += 1;
     }
@@ -172,14 +175,14 @@ contract LooneyDice {
   }
 
   // the play interface, used in the cases where we want to send a different-than-equal play through
-  function enter(uint8 play) public {
+  function enter(uint8 sumOrRange) public {
     // we need to comply with the actual minimum/maximum values to be allowed to play
     if (msg.value < CONFIG_MIN_VALUE || msg.value > CONFIG_MAX_VALUE) {
       throw;
     }
 
     // get the actual return value for the player
-    uint output = execute(play, msg.value);
+    uint output = execute(sumOrRange, msg.value);
 
     // do we need to send the player some ether, do it
     if (output > 0) {
@@ -199,22 +202,21 @@ contract LooneyDice {
   }
 
   // allow the owner to withdraw his/her fees
-  function ownerWithdrawFees() owneronly public {
-    // send any fees we have and result the value back
-    if (fees > 0) {
-      owner.call.value(fees)();
-      fees = 0;
-    }
-  }
+  function ownerWithdraw(uint size) owneronly public {
+    // our total value
+    uint output = fees + size;
 
-  // allow withdrawal of investment
-  function ownerWithdrawBank(uint size) owneronly public {
-    if (size > funds) {
+    // we can only return what we have
+    if (size > funds || output == 0) {
       throw;
     }
 
-    owner.call.value(size)();
+    // remove the actual payout values
+    fees = 0;
     funds -= size;
+
+    // return to owner
+    owner.call.value(output)();
   }
 
   // log events
