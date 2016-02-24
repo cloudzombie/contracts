@@ -79,7 +79,7 @@ contract LooneyDice {
     uint minsum = play % 10;
 
     // a > b, both >= 2 & <= 12
-    if (minsum < maxsum && minsum >= 2 && maxsum <= 12) {
+    if (minsum <= maxsum && minsum >= 2 && maxsum <= 12) {
       // store the calculated chance
       uint chance = 0;
 
@@ -132,35 +132,30 @@ contract LooneyDice {
     // get the winning result, enabling us to see where & what
     (chance, winner) = testWinner(play);
 
-    // odds used as in divisor, i.e. evens = 36/18 = 200%, however input also gets added, so adjust
-    uint output = ((input * MAX_ROLLS) / chance) - input;
+    // odds used as in divisor, i.e. evens = 36/18 = 200% (return)
+    uint output = (input * MAX_ROLLS) / chance;
+
+    // add the input to the overall funding pool
+    funds += input;
 
     // failsafe for the case where the contract could run dry
     if (output > (funds / CONFIG_MAX_EXPOSURE_DIV)) {
       throw;
     }
 
-    // the actual returns that we send back to the user
-    uint result = 0;
-
     // winning or losing outcome here?
     if (winner) {
-      // calculate the fees on the profit portion of the play
+      // calculate the fees on the return
       uint fee = output / CONFIG_FEES_DIV;
 
-      // remove the matched plays from total funds
+      // remove the fee from totals
       funds -= output;
+      output -= fee;
       fees += fee;
-
-      // set the actual return amount, including the original stake
-      result = output + input - fee;
 
       // we have one more win for the contract
       wins += 1;
     } else {
-      // send the lost amount to the pool
-      funds += input;
-
       // one more loss for the record books
       losses += 1;
     }
@@ -170,10 +165,10 @@ contract LooneyDice {
     txs += 1;
 
     // notify the world of this outcome
-    notifyPlayer(play, chance, input, result);
+    notifyPlayer(play, chance, input, output);
 
     // ok, this is now what we owe the player
-    return result;
+    return output;
   }
 
   // the play interface, used in the cases where we want to send a different-than-equal play through
