@@ -4,8 +4,6 @@ Ethereum contract for the [Looney Fifty](http://the.looney.farm/game/fifty). For
 
 ## randomness
 
-The approach is adapted from what is employed in the [lottery](../lottery/README.md), so the reader should be familiar with that.
-
 Two Lehmer generators are used, the first running for each transaction received combining the long-running result with a mix from the coinbase and blockhash, the second for executes for each play that occurs within the transaction, adapting the overall running result chain.
 
 ```
@@ -19,6 +17,8 @@ Two Lehmer generators are used, the first running for each transaction received 
     if (result % 2 == 0) {
       ...
 ```
+
+The approach is adapted from what is employed in the [lottery](../lottery/README.md).
 
 ## events
 
