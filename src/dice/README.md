@@ -1,10 +1,32 @@
 # dice
 
-A traditional dice game (1-6 per dice), played with 2 dice.
+A traditional dice game (1-6 per dice), played with 2 dice. For the currently deployed version (as compiled), you can verify the [compiler outputs](verify.md)
 
 ## randomness
 
-The approach is adapted from what is employed in the [lottery](../lottery/README.md), so the reader should be familiar with that.
+In addition to using available details such as the blockhash, current pool, the miner address to adapt the generator chain, 2 Lehmer deterministic generators are used. The first Lehmer adapts the overall seed based on the block info and the continuous running values mutated from the start of the contract.
+
+```
+// calculate the next number from the pseudo Lehmer sequence
+seeda = (seeda * LEHMER_MUL) % LEHMER_MOD;
+
+// adjust the overall random value, taking the seed, available funds & block details into account
+random ^= uint(sha3(block.coinbase, block.blockhash(block.number - 1), funds, seeda));
+```
+
+The second Lehmer adapts the random chain on a per dice-roll basis.
+
+```
+// adjust this Lehmer pseudo generator to the next value
+seedb = (seedb * LEHMER_MUL) % LEHMER_MOD;
+
+// adjust the overall random number based on the Lehmer input value
+random ^= seedb;
+
+// return the number of the side represented
+```
+
+The approach is adapted from what is employed in the [lottery](../lottery/README.md).
 
 ## matching
 
@@ -20,4 +42,4 @@ For range combinations, specify the large number first
 104 = between 10 and 4
 etc.
 
-For ranges, large number is specified first, evaluating a range inclusiv of the min and max
+For ranges the large number always needs to be specified first (42 is valid, 24 is not), and the range is evaluated inclusive of the min and max values specified.
