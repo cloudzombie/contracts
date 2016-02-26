@@ -18,7 +18,6 @@ contract LooneyBox {
   struct Participant {
     address addr;
     uint value;
-    uint idx;
   }
 
   // game configuration, also available extrenally for queries
@@ -97,9 +96,6 @@ contract LooneyBox {
     address temp = one.addr;
     one.addr = two.addr;
     two.addr = temp;
-
-    // save the index into the original
-    one.idx = two.idx;
   }
 
   // swap the participant with somebody else (values)
@@ -116,7 +112,7 @@ contract LooneyBox {
   // find a recipient and send him/her/it some Ether
   function getReceiver() private returns (Participant) {
     // create a participant for this player
-    Participant memory receiver = Participant({ addr: msg.sender, value: msg.value, idx: participants.length });
+    Participant memory receiver = Participant({ addr: msg.sender, value: msg.value });
 
     // adjust the random values, re-initializing the rng
     randomize();
@@ -188,10 +184,10 @@ contract LooneyBox {
   }
 
   // log events
-  event Player(address sender, uint32 at, address receiver, uint output, uint idx, uint pool, uint txs, uint turnover);
+  event Player(address sender, uint32 at, address receiver, uint output, uint pool, uint txs, uint turnover);
 
   // send the player event, i.e. somebody has played, this is what he/she/it did
   function notifyPlayer(Participant receiver) private {
-    Player(msg.sender, uint32(now), receiver.addr, receiver.value, receiver.idx, pool, txs, turnover);
+    Player(msg.sender, uint32(now), receiver.addr, receiver.value, pool, txs, turnover);
   }
 }
