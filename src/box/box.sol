@@ -53,18 +53,6 @@ contract LooneyBox {
   function LooneyBox() {
   }
 
-  // do we have an entry from this person yet?
-  function hasPrevious() constant private returns (bool) {
-    for (uint idx = 0; idx < participants.length; idx++) {
-      if (participants[idx].addr == msg.sender) {
-        return true;
-      }
-    }
-
-    // nothing found, this one is not in the pool
-    return false;
-  }
-
   // set the random number generator for the specific generation
   function randomize() private {
     // calculate the next number from the pseudo Lehmer sequence
@@ -138,7 +126,7 @@ contract LooneyBox {
   // go! a simple sendTransaction is enough to drive the contract
   function() public {
     // we need to comply with the actual minimum/maximum values to be allowed to play
-    if (msg.value < CONFIG_MIN_VALUE || msg.value > CONFIG_MAX_VALUE || hasPrevious()) {
+    if (msg.value < CONFIG_MIN_VALUE || msg.value > CONFIG_MAX_VALUE) {
       throw;
     }
 
