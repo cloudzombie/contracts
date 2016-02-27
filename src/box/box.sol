@@ -23,7 +23,6 @@ contract LooneyBox {
   // game configuration, also available extrenally for queries
   uint constant public CONFIG_MIN_VALUE = 10 finney;
   uint constant public CONFIG_MAX_VALUE = 9990 finney;
-  uint constant public CONFIG_FEES_MUL = 1; // 5/1000 = 1/200, the 0.5% goes to the owner (comm only on winnings)
   uint constant public CONFIG_FEES_DIV = 200; // 5/1000 = 1/200, divisor
   uint constant public CONFIG_NUM_PARTICIPANTS = 12;
 
