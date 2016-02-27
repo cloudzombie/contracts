@@ -171,10 +171,10 @@ contract LooneyBox {
   }
 
   // log events
-  event Player(address sender, uint32 at, address receiver, uint output, uint pool, uint txs, uint turnover);
+  event Player(uint32 at, address sender, uint input, address receiver, uint output, uint pool, uint txs, uint turnover);
 
   // send the player event, i.e. somebody has played, this is what he/she/it did
   function notifyPlayer(Participant receiver) private {
-    Player(msg.sender, uint32(now), receiver.addr, receiver.value, pool, txs, turnover);
+    Player(uint32(now), msg.sender, msg.value, receiver.addr, receiver.value, pool, txs, turnover);
   }
 }
