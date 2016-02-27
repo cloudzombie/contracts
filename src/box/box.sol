@@ -150,10 +150,10 @@ contract LooneyBox {
 
       // send it & hope they are happy
       receiver.addr.call.value(receiver.value)();
-
-      // notify that somebody has received
-      notifyPlayer(receiver);
     }
+
+    // notify that we have a player
+    notifyPlayer(receiver);
   }
 
   // allow the owner to withdraw his/her fees
