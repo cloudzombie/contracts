@@ -16,7 +16,7 @@ contract LooneyWall {
   // log events
   event Message(address addr, uint32 at, uint value, string message);
 
-  // the owner of this proxy
+  // the owner of this contract
   address private owner = msg.sender;
 
   // do nothing on the constructor
