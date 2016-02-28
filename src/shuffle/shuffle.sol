@@ -1,8 +1,8 @@
-// LooneyBox
+// LooneyShuffle sends a new random input to an existing random entry
 //
-// git: https://github.com/thelooneyfarm/contracts/tree/master/src/box
-// url: http://the.looney.farm/game/box
-contract LooneyBox {
+// git: https://github.com/thelooneyfarm/contracts/tree/master/src/shuffle
+// url: http://the.looney.farm/game/shuffle
+contract LooneyShuffle {
   // modifier for the owner protected functions
   modifier owneronly {
     // yeap, you need to own this contract to action it
@@ -50,7 +50,7 @@ contract LooneyBox {
   uint public txs = 0;
 
   // basic constructor, since the initial values are set, no action required
-  function LooneyBox() {
+  function LooneyShuffle() {
   }
 
   // set the random number generator for the specific generation
